@@ -98,6 +98,10 @@ export default function LivePlayer({ title, subtitle, sources, onClose }: LivePl
       handleStreamError();
     };
 
+    const streamUrl = activeSource.url && activeSource.url.startsWith('http://')
+      ? `/api/stream?url=${encodeURIComponent(activeSource.url)}`
+      : activeSource.url;
+
     if (Hls.isSupported() && activeSource.url.includes('.m3u8')) {
       hls = new Hls({
         capLevelToPlayerSize: true,
@@ -105,7 +109,7 @@ export default function LivePlayer({ title, subtitle, sources, onClose }: LivePl
         maxMaxBufferLength: 10, // Latency and buffering limit
         enableWorker: true
       });
-      hls.loadSource(activeSource.url);
+      hls.loadSource(streamUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch(handleError);
@@ -130,7 +134,7 @@ export default function LivePlayer({ title, subtitle, sources, onClose }: LivePl
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS support (Safari)
-      video.src = activeSource.url;
+      video.src = streamUrl;
       const onMetadataLoaded = () => {
         video.play().catch(handleError);
       };
@@ -140,7 +144,7 @@ export default function LivePlayer({ title, subtitle, sources, onClose }: LivePl
       };
     } else {
       // Standard video format (mp4 etc)
-      video.src = activeSource.url;
+      video.src = streamUrl;
       video.play().catch(handleError);
     }
 

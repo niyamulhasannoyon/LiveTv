@@ -168,10 +168,28 @@ export default function ChannelsTab({
         </div>
       ) : (
         <div className="text-center py-16 glass-panel rounded-xl border border-white/5 max-w-sm mx-auto">
-          <p className="text-slate-400 font-bold mb-1">No channels found</p>
-          <p className="text-slate-500 text-xs px-6">
-            We couldn't find any channels in this category matching your search.
-          </p>
+          {selectedCategory === 'Favorites ❤️' && favorites.length === 0 ? (
+            <>
+              <Heart className="w-10 h-10 text-rose-500/40 mx-auto mb-3" />
+              <p className="text-slate-300 font-bold mb-1">No Favorites Bookmarked</p>
+              <p className="text-slate-500 text-xs px-6 mb-4">
+                Click the heart icon on any channel card to add it to your favorites list.
+              </p>
+              <button
+                onClick={() => setSelectedCategory('All')}
+                className="px-4 py-2 rounded-full bg-[#00b4d8]/10 text-[#00b4d8] border border-[#00b4d8]/20 text-xs font-bold uppercase hover:bg-[#00b4d8]/20 transition-all cursor-pointer"
+              >
+                View All Channels
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-400 font-bold mb-1">No channels found</p>
+              <p className="text-slate-500 text-xs px-6">
+                We couldn't find any channels in this category matching your search.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>

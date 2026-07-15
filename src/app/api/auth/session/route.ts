@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const { email, uid, username } = await request.json();
 
     // Assign custom authorization variables target properties control dynamic scope rules context definition runtime checks
-    const role = email === 'admin@livetv.com' ? 'admin' : 'user';
+    const role = email === 'niyamulhasanbd@gmail.com' ? 'admin' : 'user';
 
     // Pack inside robust web crypto token standard data formats properties structures layers
     const sessionToken = await signToken({ userId: uid, username: username || 'Verified App User', role });

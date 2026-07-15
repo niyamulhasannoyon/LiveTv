@@ -47,7 +47,10 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
     const video = videoRef.current;
     if (!video || !urls || urls.length === 0) return;
 
-    const currentStream = urls[urlIndex];
+    let currentStream = urls[urlIndex];
+    if (currentStream && currentStream.startsWith('http://')) {
+      currentStream = `/api/stream?url=${encodeURIComponent(currentStream)}`;
+    }
     let hls: Hls | null = null;
 
     const triggerFallback = () => {

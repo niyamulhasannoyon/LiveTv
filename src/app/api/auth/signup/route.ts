@@ -10,7 +10,7 @@ function readUsers() {
     // Initial user account master database setup context tracking
     const adminPasswordHash = bcrypt.hashSync('admin123', 10);
     const defaultData = [
-      { id: '1', username: 'admin', email: 'admin@livetv.com', password: adminPasswordHash, role: 'admin' }
+      { id: '1', username: 'admin', email: 'niyamulhasanbd@gmail.com', password: adminPasswordHash, role: 'admin' }
     ];
     fs.mkdirSync(path.dirname(usersPath), { recursive: true });
     fs.writeFileSync(usersPath, JSON.stringify(defaultData, null, 2));
@@ -33,12 +33,13 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const role = email === 'niyamulhasanbd@gmail.com' ? 'admin' : 'user';
     const newUser = {
       id: Date.now().toString(),
       username,
       email,
       password: hashedPassword,
-      role: 'user' // Default access tier pipeline definition parameter
+      role
     };
 
     users.push(newUser);
