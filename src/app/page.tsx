@@ -1,362 +1,247 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { PlayCircle, Search, Info, ChevronRight, Menu, MoreVertical } from 'lucide-react';
-import { siteConfig, Match, Channel } from '../config';
-import BottomNav from '../components/BottomNav';
-import TrendingChannels from '../components/TrendingChannels';
-import MatchSchedule from '../components/MatchSchedule';
-import ChannelsTab from '../components/ChannelsTab';
-import SearchTab from '../components/SearchTab';
+import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-const LivePlayer = dynamic(() => import('../components/LivePlayer'), { ssr: false });
+import { Search, Star, Radio } from 'lucide-react';
+import { siteConfig } from '../config';
+import BottomNav from '../components/BottomNav';
+
+const CustomPlayer = dynamic(() => import('../components/CustomPlayer'), { ssr: false });
+
+interface IPTVChannel {
+  name: string;
+  logo: string;
+  category: string;
+  urls: string[];
+}
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'channels' | 'upcoming' | 'search'>('home');
-  const [activeStream, setActiveStream] = useState<{
-    title: string;
-    subtitle?: string;
-    sources: any[];
-    id: string;
-  } | null>(null);
-  
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [channels, setChannels] = useState<Channel[]>(siteConfig.channels);
-  const [isLoadingStreams, setIsLoadingStreams] = useState(false);
+  const [channels, setChannels] = useState<IPTVChannel[]>([]);
+  const [selectedChannel, setSelectedChannel] = useState<IPTVChannel | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [loading, setLoading] = useState(true);
 
-  // Load favorites on mount
   useEffect(() => {
-    const savedFavorites = localStorage.getItem('favorite-channels');
-    if (savedFavorites) {
+    async function initPlatform() {
       try {
-        setFavorites(JSON.parse(savedFavorites));
+        const res = await fetch('/api/channels');
+        const data = await res.json();
+        setChannels(data);
+
+        // Load favorites from local client storage
+        const savedFavs = JSON.parse(localStorage.getItem('tv_favs') || '[]');
+        setFavorites(savedFavs);
+
+        // Load last watched station name
+        const lastTrack = localStorage.getItem('last_channel_name');
+        const defaultChannel = data.find((c: IPTVChannel) => c.name === lastTrack) || data[0];
+        if (defaultChannel) {
+          setSelectedChannel(defaultChannel);
+        }
       } catch (err) {
-        console.error("Failed to parse favorites:", err);
+        console.error("Platform Init Error:", err);
+      } finally {
+        setLoading(false);
       }
     }
+    initPlatform();
   }, []);
 
-  // Toggle favorite handler
-  const toggleFavorite = (channelId: string) => {
+  const handleChannelSelect = (channel: IPTVChannel) => {
+    setSelectedChannel(channel);
+    localStorage.setItem('last_channel_name', channel.name);
+    // Smooth scroll to top on mobile for video player visibility
+    if (window.innerWidth < 1024) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const toggleFavorite = (name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setFavorites(prev => {
-      const updated = prev.includes(channelId)
-        ? prev.filter(id => id !== channelId)
-        : [...prev, channelId];
-      localStorage.setItem('favorite-channels', JSON.stringify(updated));
+      const updated = prev.includes(name)
+        ? prev.filter(item => item !== name)
+        : [...prev, name];
+      localStorage.setItem('tv_favs', JSON.stringify(updated));
       return updated;
     });
   };
 
-  // Fetch dynamic IPTV streams and M3U channels
-  useEffect(() => {
-    setIsLoadingStreams(true);
-    
-    Promise.all([
-      fetch('/api/streams').then(res => res.json()).catch(() => []),
-      fetch('/api/channels').then(res => res.json()).catch(() => [])
-    ])
-    .then(([streamsData, m3uData]) => {
-      const dynamicChannels: Channel[] = [];
-      const seenNames = new Set<string>();
+  // Categories parsing memo calculation
+  const categories = useMemo(() => {
+    const list = channels.map(c => c.category);
+    return ['All', 'Favorites', ...Array.from(new Set(list))];
+  }, [channels]);
 
-      // 1. Process verified streams
-      if (Array.isArray(streamsData)) {
-        streamsData.forEach((item: any) => {
-          const id = `iptv-${item.id}`;
-          seenNames.add(item.name.toLowerCase());
-          dynamicChannels.push({
-            id,
-            name: item.name,
-            logoUrl: item.logoUrl,
-            category: item.category || 'IPTV BD',
-            isLive: item.status === 'Stable',
-            metadata: `iptv-org • ${item.status}`,
-            sources: [{
-              id: `src-iptv-${item.id}`,
-              name: 'Server 1',
-              url: `/api/proxy?url=${encodeURIComponent(item.url)}`,
-              status: item.status
-            }]
-          });
-        });
-      }
+  // Client filtering & dynamic sorting (Favorites float to top)
+  const processedChannels = useMemo(() => {
+    let result = channels.filter(c => 
+      c.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-      // 2. Process parsed M3U channels (excluding duplicates)
-      if (Array.isArray(m3uData)) {
-        m3uData.forEach((item: any, idx: number) => {
-          const nameLower = item.name.toLowerCase();
-          if (!seenNames.has(nameLower)) {
-            seenNames.add(nameLower);
-            const nameClean = item.name.replace(/\s+/g, '-').toLowerCase();
-            
-            // Map the urls array to multiple mirror sources
-            const sources = (item.urls || []).map((url: string, urlIdx: number) => ({
-              id: `src-m3u-${idx}-${urlIdx}`,
-              name: `Server ${urlIdx + 1}`,
-              url: `/api/proxy?url=${encodeURIComponent(url)}`,
-              status: 'Stable' as const
-            }));
-
-            dynamicChannels.push({
-              id: `m3u-${nameClean}-${idx}`,
-              name: item.name,
-              logoUrl: item.logo || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop',
-              category: item.category || 'IPTV M3U',
-              isLive: true,
-              metadata: `${sources.length} Mirror${sources.length > 1 ? 's' : ''} • M3U`,
-              sources
-            });
-          }
-        });
-      }
-
-      setChannels([...siteConfig.channels, ...dynamicChannels]);
-    })
-    .catch(err => console.error("Failed to load dynamic streams and M3U:", err))
-    .finally(() => setIsLoadingStreams(false));
-  }, []);
-
-  // Auto-advance slide carousel every 6 seconds
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % siteConfig.featuredSlides.length);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleWatchMatch = (match: Match) => {
-    setActiveStream({
-      id: match.id,
-      title: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
-      subtitle: match.tournament,
-      sources: match.sources
-    });
-    // Scroll to top on mobile for player visibility
-    if (window.innerWidth < 1024) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (selectedCategory === 'Favorites') {
+      result = result.filter(c => favorites.includes(c.name));
+    } else if (selectedCategory !== 'All') {
+      result = result.filter(c => c.category === selectedCategory);
     }
-  };
 
-  const handleWatchChannel = (channel: Channel) => {
-    setActiveStream({
-      id: channel.id,
-      title: channel.name,
-      subtitle: channel.metadata || channel.category,
-      sources: channel.sources
+    // Sort: favorites first, then alphabetically by name
+    return [...result].sort((a, b) => {
+      const aFav = favorites.includes(a.name) ? 1 : 0;
+      const bFav = favorites.includes(b.name) ? 1 : 0;
+      if (bFav !== aFav) {
+        return bFav - aFav;
+      }
+      return a.name.localeCompare(b.name);
     });
-    if (window.innerWidth < 1024) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+  }, [channels, searchQuery, selectedCategory, favorites]);
 
-  const handleClosePlayer = () => {
-    setActiveStream(null);
-  };
-
-  // Get active slide info
-  const featuredMatch = siteConfig.featuredSlides[currentSlide];
-  const featuredHomeFlag = `https://flagcdn.com/w160/${featuredMatch.homeTeam.flagCode}.png`;
-  const featuredAwayFlag = `https://flagcdn.com/w160/${featuredMatch.awayTeam.flagCode}.png`;
-
-  // Filtered favorite channels
-  const favoriteChannels = channels.filter(ch => favorites.includes(ch.id));
+  // Loading Screen Skeleton Loader
+  if (loading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#090b10] text-[#f8fafc]">
+        <div className="w-12 h-12 rounded-full border-4 border-[#00b4d8]/20 border-t-[#00b4d8] animate-spin mb-4" />
+        <p className="text-sm font-black uppercase tracking-widest text-[#00b4d8] animate-pulse">
+          Booting LiveTV Core Node...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen bg-[#090b10] text-[#f8fafc] pb-24 md:pb-12 md:pt-6">
       
-      {/* Mobile Top Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#090b10]/95 backdrop-blur-md border-b border-white/5 px-4 py-3.5 flex justify-between items-center">
-        <h1 className="text-lg font-black text-[#00b4d8] tracking-widest uppercase">
-          {siteConfig.siteName}
-        </h1>
-        <div className="flex items-center gap-3">
-          <Search 
-            className="w-5 h-5 text-slate-400 cursor-pointer hover:text-white"
-            onClick={() => setActiveTab('search')}
-          />
-          <MoreVertical className="w-5 h-5 text-slate-400 cursor-pointer" />
-        </div>
-      </div>
+      {/* Navigation Headers and Footers */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Grid Wrapper */}
+      {/* Main Grid Layout wrapper */}
       <div className="w-full max-w-6xl mx-auto px-4 mt-20 md:mt-24">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left Column: Player Container (sticky on desktop) */}
-          {activeStream && (
-            <div className="lg:col-span-7 lg:sticky lg:top-24 z-30 w-full">
-              <LivePlayer 
-                title={activeStream.title}
-                subtitle={activeStream.subtitle}
-                sources={activeStream.sources}
-                onClose={handleClosePlayer}
-              />
+          {/* Left Column: Player Screen Area */}
+          <div className="lg:col-span-8 lg:sticky lg:top-24 space-y-4 w-full">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 truncate">
+                <Radio className="w-4 h-4 text-rose-500 animate-pulse flex-shrink-0" />
+                <h1 className="text-lg md:text-xl font-black text-white tracking-wide truncate">
+                  Now Airing: {selectedChannel ? selectedChannel.name : 'Select Stream'}
+                </h1>
+              </div>
+              {selectedChannel && (
+                <button 
+                  onClick={(e) => toggleFavorite(selectedChannel.name, e)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-300 flex items-center gap-1.5 ${
+                    favorites.includes(selectedChannel.name) 
+                      ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' 
+                      : 'bg-white/5 text-slate-400 border-white/5 hover:border-white/10'
+                  }`}
+                >
+                  <Star className={`w-3.5 h-3.5 ${favorites.includes(selectedChannel.name) ? 'fill-yellow-400 text-yellow-400' : 'text-slate-400'}`} />
+                  <span>{favorites.includes(selectedChannel.name) ? 'Bookmarked' : 'Favorite'}</span>
+                </button>
+              )}
             </div>
-          )}
 
-          {/* Right Column: Listings and Content */}
-          <div className={`${activeStream ? 'lg:col-span-5 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto no-scrollbar pb-12' : 'lg:col-span-12'} w-full`}>
-            
-            {/* Bottom Nav / Desktop Menu */}
-            <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+            <CustomPlayer 
+              urls={selectedChannel ? selectedChannel.urls : []} 
+              channelName={selectedChannel?.name}
+            />
+            {selectedChannel && (
+              <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase tracking-wider bg-white/5 border border-white/5 rounded-2xl px-4 py-2.5">
+                <span>Available Server Mirrors: {selectedChannel.urls.length}</span>
+                <span className="text-[#00b4d8]">{selectedChannel.category}</span>
+              </div>
+            )}
+          </div>
 
-            {activeTab === 'home' && (
-              <div className="w-full">
-                
-                {/* Search Input Bar (Mobile only) */}
-                <div className="md:hidden w-full px-1 mb-6 mt-4">
-                  <div 
-                    onClick={() => setActiveTab('search')}
-                    className="w-full bg-[#141821] border border-white/5 hover:border-white/10 rounded-xl p-3 flex items-center gap-3 cursor-pointer text-slate-500 hover:text-slate-400"
+          {/* Right Column: Dynamic Controller Station */}
+          <div className="lg:col-span-4 bg-[#141821] border border-white/5 rounded-3xl p-4 flex flex-col h-[75vh] md:h-[80vh] shadow-[0_15px_40px_rgba(0,0,0,0.55)]">
+            <div className="space-y-3 mb-4 flex-shrink-0">
+              
+              {/* Search bar */}
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input 
+                  type="text"
+                  placeholder="Search stream networks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#090b10] border border-white/5 hover:border-white/10 text-white placeholder-slate-500 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#00b4d8] transition-all font-medium"
+                />
+              </div>
+
+              {/* Scrollable Categories List */}
+              <div className="flex gap-2 overflow-x-auto pb-1 text-xs no-scrollbar snap-x">
+                {categories.map((cat, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3.5 py-1.5 rounded-full font-bold whitespace-nowrap transition-all border snap-start ${
+                      selectedCategory === cat 
+                        ? 'bg-[#00b4d8]/10 text-[#00b4d8] border-[#00b4d8] shadow-md shadow-[#00b4d8]/10' 
+                        : 'bg-[#090b10] text-slate-400 border-white/5 hover:bg-white/5'
+                    }`}
                   >
-                    <Search className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs font-semibold">Search channels, events...</span>
-                  </div>
-                </div>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                {/* Featured Match Slide Banner (Carousel) - Shown only if no active stream is playing to save space on desktop */}
-                {!activeStream && (
-                  <div className="w-full mb-8 mt-4">
-                    <div className="w-full aspect-[2.1/1] md:aspect-[3/1] rounded-3xl overflow-hidden relative border border-white/5 shadow-2xl group">
-                      
-                      {/* Banner Image overlay */}
-                      <div className="absolute inset-0 bg-[#141821] flex justify-between items-center overflow-hidden">
-                        <div className="w-1/2 h-full opacity-30 blur-2xl relative select-none">
-                          <img src={featuredHomeFlag} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="w-1/2 h-full opacity-30 blur-2xl relative select-none">
-                          <img src={featuredAwayFlag} className="w-full h-full object-cover" />
-                        </div>
-                      </div>
-
-                      {/* Dark gradient overlay */}
-                      <div className="absolute inset-0 featured-overlay z-10 flex flex-col justify-between p-4 md:p-6">
-                        <div className="flex justify-between items-center z-20">
-                          <span className="text-[9px] md:text-xs font-extrabold uppercase bg-white/5 border border-white/10 px-3 py-1 rounded-full text-slate-200 tracking-wider">
-                            {featuredMatch.tournament}
-                          </span>
-                          <span className="px-2.5 py-1 rounded-full bg-[#00b4d8]/10 border border-[#00b4d8]/20 text-[#00b4d8] text-[9px] md:text-xs font-extrabold uppercase flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00b4d8]" /> Upcoming
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-center gap-6 md:gap-12 my-2 z-20">
-                          <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-white/10 shadow-lg p-0.5 shrink-0 bg-[#090b10]">
-                            <img src={featuredHomeFlag} alt={featuredMatch.homeTeam.name} className="w-full h-full object-cover rounded-full" />
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs md:text-sm font-black text-[#00b4d8] tracking-widest bg-[#00b4d8]/10 border border-[#00b4d8]/20 px-3 py-0.5 rounded-full">VS</span>
-                          </div>
-                          <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-white/10 shadow-lg p-0.5 shrink-0 bg-[#090b10]">
-                            <img src={featuredAwayFlag} alt={featuredMatch.awayTeam.name} className="w-full h-full object-cover rounded-full" />
-                          </div>
-                        </div>
-
-                        <div className="flex items-end justify-between z-20 gap-4 mt-2">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-base md:text-2xl font-black text-white leading-tight">
-                                {featuredMatch.homeTeam.name} vs {featuredMatch.awayTeam.name}
-                              </span>
-                            </div>
-                            {featuredMatch.startsIn && (
-                              <span className="text-[10px] md:text-xs font-bold text-[#00b4d8] tracking-wider mt-1 uppercase">
-                                Starts in: {featuredMatch.startsIn}
-                              </span>
-                            )}
-                          </div>
-                          
-                          <button 
-                            onClick={() => handleWatchMatch(featuredMatch)}
-                            className="px-4 py-2.5 md:px-5 md:py-3 rounded-2xl bg-[#00b4d8] hover:bg-[#00b4d8]/80 text-[#090b10] font-black text-xs md:text-sm flex items-center gap-1.5 shadow-[0_4px_20px_rgba(0,180,216,0.3)] shrink-0 transition-transform hover:scale-105 active:scale-95"
-                          >
-                            <Info className="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>DETAILS</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-center items-center gap-1.5 mt-3">
-                      {siteConfig.featuredSlides.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentSlide(idx)}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${
-                            currentSlide === idx ? 'w-6 bg-[#00b4d8]' : 'w-1.5 bg-slate-700'
-                          }`}
+            {/* Scrollable Channels Cards Stack */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+              {processedChannels.length > 0 ? (
+                processedChannels.map((channel, idx) => {
+                  const isFav = favorites.includes(channel.name);
+                  const isPlaying = selectedChannel?.name === channel.name;
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => handleChannelSelect(channel)}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all border ${
+                        isPlaying 
+                          ? 'bg-[#00b4d8]/10 text-white border-[#00b4d8]/40 shadow-inner' 
+                          : 'bg-[#090b10]/40 hover:bg-white/5 border-white/5 hover:border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img 
+                          src={channel.logo} 
+                          alt={channel.name} 
+                          className="w-10 h-10 object-contain bg-white rounded-xl p-1 flex-shrink-0"
+                          onError={(e) => { 
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop'; 
+                          }}
                         />
-                      ))}
+                        <div className="min-w-0">
+                          <p className="text-xs md:text-sm font-bold truncate tracking-wide text-slate-200">
+                            {channel.name}
+                          </p>
+                          <span className={`text-[10px] font-semibold ${isPlaying ? 'text-[#00b4d8] opacity-90' : 'text-slate-500'} uppercase tracking-wider`}>
+                            {channel.category}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={(e) => toggleFavorite(channel.name, e)}
+                        className="p-2 text-slate-400 hover:text-yellow-400 hover:scale-110 transition-all"
+                        title={isFav ? "Remove from Favorites" : "Add to Favorites"}
+                      >
+                        <Star className={`w-4.5 h-4.5 ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'}`} />
+                      </button>
                     </div>
-                  </div>
-                )}
-
-                {/* Favorites section (if active) */}
-                {favoriteChannels.length > 0 && (
-                  <TrendingChannels 
-                    channels={favoriteChannels} 
-                    onSelectChannel={handleWatchChannel}
-                    activeChannelId={activeStream?.id}
-                    title="Your Favorites ❤️"
-                    isLoading={isLoadingStreams}
-                  />
-                )}
-
-                {/* Trending circular channels list */}
-                <TrendingChannels 
-                  channels={channels} 
-                  onSelectChannel={handleWatchChannel}
-                  activeChannelId={activeStream?.id}
-                  title="Trending Channels"
-                  isLoading={isLoadingStreams}
-                />
-
-                {/* Today's matches schedule */}
-                <MatchSchedule 
-                  schedules={siteConfig.schedules} 
-                  onWatchMatch={handleWatchMatch}
-                  activeMatchId={activeStream?.id}
-                />
-
-              </div>
-            )}
-
-            {activeTab === 'channels' && (
-              <div className="mt-4">
-                <ChannelsTab 
-                  channels={channels}
-                  onSelectChannel={handleWatchChannel}
-                  activeChannelId={activeStream?.id}
-                  isLoading={isLoadingStreams}
-                  favorites={favorites}
-                  onToggleFavorite={toggleFavorite}
-                />
-              </div>
-            )}
-
-            {activeTab === 'upcoming' && (
-              <div className="mt-4">
-                <MatchSchedule 
-                  schedules={siteConfig.schedules.filter(m => m.status === 'upcoming')} 
-                  onWatchMatch={handleWatchMatch}
-                  activeMatchId={activeStream?.id}
-                />
-              </div>
-            )}
-
-            {activeTab === 'search' && (
-              <div className="mt-4">
-                <SearchTab 
-                  channels={channels}
-                  onSelectChannel={handleWatchChannel}
-                  activeChannelId={activeStream?.id}
-                  favorites={favorites}
-                  onToggleFavorite={toggleFavorite}
-                />
-              </div>
-            )}
-
+                  );
+                })
+              ) : (
+                <p className="text-center text-xs text-slate-500 pt-8 font-semibold uppercase tracking-wider">
+                  No live networks match filters.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

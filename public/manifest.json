@@ -1,0 +1,22 @@
+{
+  "name": "GOPLAY Live TV OTT Platform",
+  "short_name": "GOPLAY Live",
+  "description": "Watch live TV, news, and sports streaming channels in a premium dark glassmorphic layout.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#090b10",
+  "theme_color": "#00b4d8",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=192&auto=format&fit=crop",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=512&auto=format&fit=crop",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
