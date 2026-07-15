@@ -102,6 +102,8 @@ export default function LivePlayer({ title, subtitle, sources, onClose }: LivePl
       hls = new Hls({
         capLevelToPlayerSize: true,
         maxBufferLength: 30,
+        maxMaxBufferLength: 10, // Latency and buffering limit
+        enableWorker: true
       });
       hls.loadSource(activeSource.url);
       hls.attachMedia(video);
@@ -110,7 +112,20 @@ export default function LivePlayer({ title, subtitle, sources, onClose }: LivePl
       });
       hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
-          handleError();
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log("Network error, trying to recover HLS stream...");
+              hls?.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log("Media error, trying to recover HLS playback...");
+              hls?.recoverMediaError();
+              break;
+            default:
+              console.log("Unrecoverable HLS playback error. Running mirror fallback...");
+              handleError();
+              break;
+          }
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {

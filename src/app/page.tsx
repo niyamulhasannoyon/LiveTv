@@ -8,7 +8,8 @@ import TrendingChannels from '../components/TrendingChannels';
 import MatchSchedule from '../components/MatchSchedule';
 import ChannelsTab from '../components/ChannelsTab';
 import SearchTab from '../components/SearchTab';
-import LivePlayer from '../components/LivePlayer';
+import dynamic from 'next/dynamic';
+const LivePlayer = dynamic(() => import('../components/LivePlayer'), { ssr: false });
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'channels' | 'upcoming' | 'search'>('home');
@@ -47,15 +48,25 @@ export default function Home() {
     });
   };
 
-  // Fetch dynamic IPTV streams
+  // Fetch dynamic IPTV streams and M3U channels
   useEffect(() => {
     setIsLoadingStreams(true);
-    fetch('/api/streams')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          const dynamicChannels = data.map((item: any) => ({
-            id: `iptv-${item.id}`,
+    
+    Promise.all([
+      fetch('/api/streams').then(res => res.json()).catch(() => []),
+      fetch('/api/channels').then(res => res.json()).catch(() => [])
+    ])
+    .then(([streamsData, m3uData]) => {
+      const dynamicChannels: Channel[] = [];
+      const seenNames = new Set<string>();
+
+      // 1. Process verified streams
+      if (Array.isArray(streamsData)) {
+        streamsData.forEach((item: any) => {
+          const id = `iptv-${item.id}`;
+          seenNames.add(item.name.toLowerCase());
+          dynamicChannels.push({
+            id,
             name: item.name,
             logoUrl: item.logoUrl,
             category: item.category || 'IPTV BD',
@@ -67,12 +78,43 @@ export default function Home() {
               url: `/api/proxy?url=${encodeURIComponent(item.url)}`,
               status: item.status
             }]
-          }));
-          setChannels([...siteConfig.channels, ...dynamicChannels]);
-        }
-      })
-      .catch(err => console.error("Failed to load dynamic streams:", err))
-      .finally(() => setIsLoadingStreams(false));
+          });
+        });
+      }
+
+      // 2. Process parsed M3U channels (excluding duplicates)
+      if (Array.isArray(m3uData)) {
+        m3uData.forEach((item: any, idx: number) => {
+          const nameLower = item.name.toLowerCase();
+          if (!seenNames.has(nameLower)) {
+            seenNames.add(nameLower);
+            const nameClean = item.name.replace(/\s+/g, '-').toLowerCase();
+            
+            // Map the urls array to multiple mirror sources
+            const sources = (item.urls || []).map((url: string, urlIdx: number) => ({
+              id: `src-m3u-${idx}-${urlIdx}`,
+              name: `Server ${urlIdx + 1}`,
+              url: `/api/proxy?url=${encodeURIComponent(url)}`,
+              status: 'Stable' as const
+            }));
+
+            dynamicChannels.push({
+              id: `m3u-${nameClean}-${idx}`,
+              name: item.name,
+              logoUrl: item.logo || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop',
+              category: item.category || 'IPTV M3U',
+              isLive: true,
+              metadata: `${sources.length} Mirror${sources.length > 1 ? 's' : ''} • M3U`,
+              sources
+            });
+          }
+        });
+      }
+
+      setChannels([...siteConfig.channels, ...dynamicChannels]);
+    })
+    .catch(err => console.error("Failed to load dynamic streams and M3U:", err))
+    .finally(() => setIsLoadingStreams(false));
   }, []);
 
   // Auto-advance slide carousel every 6 seconds
