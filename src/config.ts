@@ -89,11 +89,11 @@ export interface SiteConfig {
 }
 
 export const siteConfig: SiteConfig = {
-  siteName: "GOPLAY Live",
+  siteName: "LIVE TV",
   tagline: "Your Ultimate Destination for Live OTT Streaming",
   description: "Watch live matches, sports channels, and entertainment in premium dark layout with glassmorphic cards.",
-  logoText: "GOPLAY",
-  contactEmail: "support@goplay.tv",
+  logoText: "LIVE TV",
+  contactEmail: "support@livetv.com",
 
   featuredSlides: [
     {
@@ -279,11 +279,11 @@ export const siteConfig: SiteConfig = {
 
   pages: {
     about: {
-      title: "About GOPLAY Live",
+      title: "About LIVE TV",
       content: [
-        "GOPLAY Live is a state-of-the-art sports streaming platform dedicated to bringing you the most exciting sports action from around the world in real-time.",
+        "LIVE TV is a state-of-the-art sports streaming platform dedicated to bringing you the most exciting sports action from around the world in real-time.",
         "Our mission is to provide sports enthusiasts with a seamless, high-performance, and buffer-free viewing experience. With a minimalist design and a dark glassmorphic interface, we focus on what matters most—the game.",
-        "Whether you are a fan of Football, Cricket, Tennis, or Basketball, GOPLAY Live ensures that you never miss a match, a goal, or a wicket. Join millions of fans worldwide and enjoy the game!"
+        "Whether you are a fan of Football, Cricket, Tennis, or Basketball, LIVE TV ensures that you never miss a match, a goal, or a wicket. Join millions of fans worldwide and enjoy the game!"
       ]
     },
     privacy: {
@@ -306,7 +306,7 @@ export const siteConfig: SiteConfig = {
       sections: [
         {
           heading: "1. Acceptance of Terms",
-          text: "By accessing GOPLAY Live, you agree to comply with and be bound by these terms. If you do not agree, please do not use our services."
+          text: "By accessing LIVE TV, you agree to comply with and be bound by these terms. If you do not agree, please do not use our services."
         },
         {
           heading: "2. Streaming & Fair Use",
@@ -319,7 +319,7 @@ export const siteConfig: SiteConfig = {
       subtitle: "Have a question or feedback? We'd love to hear from you. Drop us a message!",
       address: "Dhaka, Bangladesh",
       phone: "+880 1234-567890",
-      email: "support@goplay.tv"
+      email: "support@livetv.com"
     }
   }
 };
