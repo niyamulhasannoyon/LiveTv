@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import Hls from 'hls.js';
-import { Play, Pause, Volume2, VolumeX, Maximize2, RefreshCw } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, RefreshCw, Tv } from 'lucide-react';
 
 interface CustomPlayerProps {
   urls: string[];
@@ -176,14 +176,22 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
   };
 
   const toggleMute = () => {
-    const targetMute = !isMuted;
-    setIsMuted(targetMute);
-    if (videoRef.current) {
-      videoRef.current.muted = targetMute;
-    }
-    if (!targetMute && volume === 0) {
-      setVolume(0.5);
-    }
+    setIsMuted(prev => {
+      const targetMute = !prev;
+      if (videoRef.current) {
+        videoRef.current.muted = targetMute;
+      }
+      if (targetMute === false) {
+        setVolume(v => {
+          if (v === 0) {
+            if (videoRef.current) videoRef.current.volume = 0.5;
+            return 0.5;
+          }
+          return v;
+        });
+      }
+      return targetMute;
+    });
   };
 
   const toggleFullscreen = () => {
@@ -198,6 +206,63 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
       document.exitFullscreen();
     }
   };
+
+  const togglePictureInPicture = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (document.pictureInPictureEnabled) {
+        await video.requestPictureInPicture();
+      } else {
+        alert("Picture-in-Picture mode is not supported by your browser.");
+      }
+    } catch (err) {
+      console.error("Failed to enter Picture-in-Picture:", err);
+    }
+  };
+
+  // Keyboard controls listener setup
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+         activeEl.tagName === 'TEXTAREA' ||
+         activeEl.getAttribute('contenteditable') === 'true')
+      ) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case ' ': // Space for play/pause
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'm': // M for mute/unmute
+          e.preventDefault();
+          toggleMute();
+          break;
+        case 'f': // F for fullscreen
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+        case 'p': // P for picture-in-picture
+          e.preventDefault();
+          togglePictureInPicture();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const handleManualRefresh = () => {
     setStatusMessage('');
@@ -294,11 +359,20 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Live
             </span>
 
+            {/* Picture-in-Picture toggle button */}
+            <button 
+              onClick={togglePictureInPicture}
+              className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all active:scale-95"
+              title="Picture-in-Picture (P)"
+            >
+              <Tv className="w-3.5 h-3.5" />
+            </button>
+
             {/* Fullscreen toggle button */}
             <button 
               onClick={toggleFullscreen}
               className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all active:scale-95"
-              title="Toggle Fullscreen"
+              title="Toggle Fullscreen (F)"
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>

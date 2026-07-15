@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Search, Heart } from 'lucide-react';
 import { Channel } from '../config';
+import SafeImage from './SafeImage';
 
 interface ChannelsTabProps {
   channels: Channel[];
@@ -105,10 +106,10 @@ export default function ChannelsTab({
           {Array.from({ length: 10 }).map((_, idx) => (
             <div
               key={`skeleton-ch-${idx}`}
-              className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center relative animate-pulse border border-white/5 h-40"
+              className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center relative border border-white/5 h-40"
             >
-              <div className="w-16 h-16 rounded-full bg-white/5 mb-4 animate-pulse shadow-md" />
-              <div className="h-3 w-16 bg-white/5 rounded-full animate-pulse" />
+              <div className="w-16 h-16 rounded-full bg-white/5 mb-4 shadow-md shimmer" />
+              <div className="h-3 w-16 bg-white/5 rounded-full shimmer" />
             </div>
           ))}
         </div>
@@ -147,11 +148,13 @@ export default function ChannelsTab({
                 </button>
 
                 {/* Circle Logo */}
-                <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-[#090b10] flex items-center justify-center p-0.5 group-hover:scale-105 transition-transform duration-300 mb-4 shadow-md">
-                  <img
+                <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-[#090b10] flex items-center justify-center p-0.5 group-hover:scale-105 transition-transform duration-300 mb-4 shadow-md relative">
+                  <SafeImage
                     src={channel.logoUrl}
                     alt={channel.name}
-                    className="w-full h-full object-cover rounded-full"
+                    fill
+                    sizes="64px"
+                    className="object-cover rounded-full"
                   />
                 </div>
 

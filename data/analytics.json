@@ -1,0 +1,23 @@
+{
+  "activeSessions": {
+    "sess_ha3g4jgxw": {
+      "userId": "usr_9824",
+      "username": "Niyamul Hasan Noyon",
+      "currentChannel": "Aamar Bangla (720p)",
+      "lastPing": 1784142953539
+    }
+  },
+  "channelViews": {
+    "Aamar Bangla (720p)": 2
+  },
+  "logHistory": [
+    {
+      "timestamp": "2026-07-15T19:12:46.323Z",
+      "event": "Channel tuning initialization alert: Aamar Bangla (720p) selected by user Niyamul Hasan Noyon"
+    },
+    {
+      "timestamp": "2026-07-15T19:12:46.328Z",
+      "event": "Channel tuning initialization alert: Aamar Bangla (720p) selected by user Niyamul Hasan Noyon"
+    }
+  ]
+}

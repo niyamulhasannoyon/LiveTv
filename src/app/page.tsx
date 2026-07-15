@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { Search, Star, Radio } from 'lucide-react';
 import { siteConfig } from '../config';
 import BottomNav from '../components/BottomNav';
+import AnalyticsTracker from '../components/AnalyticsTracker';
+import SafeImage from '../components/SafeImage';
 
 const CustomPlayer = dynamic(() => import('../components/CustomPlayer'), { ssr: false });
 
@@ -102,17 +104,80 @@ export default function Home() {
   // Loading Screen Skeleton Loader
   if (loading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#090b10] text-[#f8fafc]">
-        <div className="w-12 h-12 rounded-full border-4 border-[#00b4d8]/20 border-t-[#00b4d8] animate-spin mb-4" />
-        <p className="text-sm font-black uppercase tracking-widest text-[#00b4d8] animate-pulse">
-          Booting LiveTV Core Node...
-        </p>
+      <div className="w-full min-h-screen bg-[#090b10] text-[#f8fafc] pb-24 md:pb-12 md:pt-6">
+        <div className="w-full max-w-6xl mx-auto px-4 mt-20 md:mt-24">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Left Column: Player Screen Area Skeleton */}
+            <div className="lg:col-span-8 space-y-4 w-full">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 w-1/3 h-6 rounded-lg bg-white/5 shimmer" />
+                <div className="w-24 h-8 rounded-xl bg-white/5 shimmer" />
+              </div>
+
+              {/* Video Player Skeleton */}
+              <div className="w-full aspect-video bg-[#141821]/40 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative flex flex-col justify-between p-6">
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-white/5 shimmer flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-white/10" />
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mt-auto w-full">
+                  <div className="flex items-center gap-4 w-1/2">
+                    <div className="w-8 h-8 rounded-lg bg-white/5 shimmer" />
+                    <div className="w-20 h-4 rounded-lg bg-white/5 shimmer" />
+                  </div>
+                  <div className="w-16 h-8 rounded-lg bg-white/5 shimmer" />
+                </div>
+              </div>
+
+              {/* Server info bar skeleton */}
+              <div className="w-full h-10 rounded-2xl bg-white/5 shimmer border border-white/5" />
+            </div>
+
+            {/* Right Column: Dynamic Controller Station Skeleton */}
+            <div className="lg:col-span-4 bg-[#141821] border border-white/5 rounded-3xl p-4 flex flex-col h-[75vh] md:h-[80vh] space-y-4">
+              {/* Search input skeleton */}
+              <div className="w-full h-11 bg-white/5 shimmer rounded-xl border border-white/5" />
+
+              {/* Categories scroll area skeleton */}
+              <div className="flex gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="w-20 h-8 rounded-full bg-white/5 shimmer shrink-0" />
+                ))}
+              </div>
+
+              {/* Channel List Skeletons */}
+              <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div
+                    key={`loading-ch-${idx}`}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl border border-white/5 bg-[#090b10]/20"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 w-3/4">
+                      {/* Logo placeholder */}
+                      <div className="w-10 h-10 rounded-xl bg-white/5 shimmer flex-shrink-0" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="h-3 w-2/3 bg-white/5 shimmer rounded-full" />
+                        <div className="h-2 w-1/3 bg-white/5 shimmer rounded-full" />
+                      </div>
+                    </div>
+                    {/* Star placeholder */}
+                    <div className="w-6 h-6 rounded-lg bg-white/5 shimmer mr-2" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="w-full min-h-screen bg-[#090b10] text-[#f8fafc] pb-24 md:pb-12 md:pt-6">
+      <AnalyticsTracker activeChannelName={selectedChannel?.name} />
       
       {/* Navigation Headers and Footers */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -208,14 +273,15 @@ export default function Home() {
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <img 
-                          src={channel.logo} 
-                          alt={channel.name} 
-                          className="w-10 h-10 object-contain bg-white rounded-xl p-1 flex-shrink-0"
-                          onError={(e) => { 
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop'; 
-                          }}
-                        />
+                        <div className="w-10 h-10 rounded-xl p-1 bg-white flex-shrink-0 relative overflow-hidden">
+                          <SafeImage 
+                            src={channel.logo} 
+                            alt={channel.name} 
+                            fill
+                            sizes="40px"
+                            className="object-contain p-1"
+                          />
+                        </div>
                         <div className="min-w-0">
                           <p className="text-xs md:text-sm font-bold truncate tracking-wide text-slate-200">
                             {channel.name}

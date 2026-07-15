@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Channel } from '../config';
+import SafeImage from './SafeImage';
 
 interface TrendingChannelsProps {
   channels: Channel[];
@@ -55,16 +56,18 @@ export default function TrendingChannels({
               >
                 {/* Circular Logo Container */}
                 <div 
-                  className={`w-16 h-16 rounded-full overflow-hidden border bg-[#141821] flex items-center justify-center transition-all p-0.5 ${
+                  className={`w-16 h-16 rounded-full overflow-hidden border bg-[#141821] flex items-center justify-center transition-all p-0.5 relative ${
                     isActive 
                       ? 'border-[#00b4d8] ring-2 ring-[#00b4d8]/20 shadow-[0_0_15px_rgba(0,180,216,0.4)] scale-105' 
                       : 'border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <img 
+                  <SafeImage 
                     src={channel.logoUrl} 
                     alt={channel.name} 
-                    className="w-full h-full object-cover rounded-full" 
+                    fill
+                    sizes="64px"
+                    className="object-cover rounded-full" 
                   />
                 </div>
                 <span className="text-[10px] font-bold text-center text-slate-300 truncate w-full group-hover:text-white">

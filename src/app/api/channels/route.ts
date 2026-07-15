@@ -1,10 +1,27 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 interface IPTVChannel {
+  id?: string;
   name: string;
   logo: string;
   category: string;
   urls: string[];
+}
+
+const dataPath = path.join(process.cwd(), 'data', 'custom_channels.json');
+
+function readCustomChannels(): IPTVChannel[] {
+  try {
+    if (fs.existsSync(dataPath)) {
+      const content = fs.readFileSync(dataPath, 'utf8');
+      return JSON.parse(content) as IPTVChannel[];
+    }
+  } catch (e) {
+    console.error('Error reading custom channels in feed:', e);
+  }
+  return [];
 }
 
 export async function GET() {
@@ -14,15 +31,26 @@ export async function GET() {
       next: { revalidate: 3600 }
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch IPTV data');
+    let channels: IPTVChannel[] = [];
+    if (response.ok) {
+      const m3uData = await response.text();
+      channels = parseM3U(m3uData);
+    } else {
+      console.error('Failed to fetch external IPTV data');
     }
 
-    const m3uData = await response.text();
-    const channels = parseM3U(m3uData);
+    // Merge custom channels at the beginning of the list
+    const customChannels = readCustomChannels();
+    const combined = [...customChannels, ...channels];
 
-    return NextResponse.json(channels);
+    return NextResponse.json(combined);
   } catch (error: any) {
+    try {
+      const customChannels = readCustomChannels();
+      if (customChannels.length > 0) {
+        return NextResponse.json(customChannels);
+      }
+    } catch (_) {}
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

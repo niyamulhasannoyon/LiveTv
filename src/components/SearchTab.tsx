@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Search as SearchIcon, Heart } from 'lucide-react';
 import { Channel } from '../config';
+import SafeImage from './SafeImage';
 
 interface SearchTabProps {
   channels: Channel[];
@@ -99,11 +100,13 @@ export default function SearchTab({
                 >
                   <div className="flex items-center gap-4">
                     {/* Circle Logo */}
-                    <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-[#090b10] flex items-center justify-center p-0.5 shrink-0 shadow-inner">
-                      <img
+                    <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-[#090b10] flex items-center justify-center p-0.5 shrink-0 shadow-inner relative">
+                      <SafeImage
                         src={channel.logoUrl}
                         alt={channel.name}
-                        className="w-full h-full object-cover rounded-full"
+                        fill
+                        sizes="48px"
+                        className="object-cover rounded-full"
                       />
                     </div>
                     {/* Channel Metadata */}
