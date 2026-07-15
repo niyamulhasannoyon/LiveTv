@@ -30,6 +30,34 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Sync tab status with global navbar events and handle initial route
+  useEffect(() => {
+    // Check initial search params
+    const params = new URLSearchParams(window.location.search);
+    const initialTab = params.get('tab');
+    if (initialTab && ['home', 'channels', 'upcoming', 'search'].includes(initialTab)) {
+      setActiveTab(initialTab as any);
+    }
+
+    const handleTabChangeEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setActiveTab(customEvent.detail as any);
+    };
+
+    window.addEventListener('tab-change', handleTabChangeEvent);
+    return () => {
+      window.removeEventListener('tab-change', handleTabChangeEvent);
+    };
+  }, []);
+
+  const handleTabChange = (tab: 'home' | 'channels' | 'upcoming' | 'search') => {
+    setActiveTab(tab);
+    window.dispatchEvent(new CustomEvent('tab-change', { detail: tab }));
+    // Update URL parameter
+    const newUrl = tab === 'home' ? '/' : `/?tab=${tab}`;
+    window.history.pushState({}, '', newUrl);
+  };
+
   useEffect(() => {
     async function initPlatform() {
       try {

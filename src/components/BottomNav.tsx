@@ -1,8 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Home, Tv, Calendar, Search } from 'lucide-react';
-import { siteConfig } from '../config';
+import { Home, Tv, Calendar } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: 'home' | 'channels' | 'upcoming' | 'search';
@@ -17,61 +16,25 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   ] as const;
 
   return (
-    <>
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#090b10]/95 backdrop-blur-md border-t border-white/5 md:hidden flex justify-around items-center py-2.5 pb-5">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center gap-1.5 transition-colors ${
-                isActive ? 'text-[#00b4d8]' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[2]'}`} />
-              <span className="text-[10px] font-semibold tracking-wider uppercase">{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Desktop Header / Sidebar Menu */}
-      <div className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-[#090b10]/90 backdrop-blur-md border-b border-white/5 px-8 py-4 justify-between items-center">
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-black text-[#00b4d8] tracking-widest">{siteConfig.logoText}</span>
-        </div>
-        <div className="flex items-center gap-8">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`text-sm font-bold tracking-widest uppercase transition-colors py-1 border-b-2 ${
-                  isActive
-                    ? 'text-[#00b4d8] border-[#00b4d8]'
-                    : 'text-slate-400 hover:text-white border-transparent hover:border-slate-500'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
+    /* Mobile Bottom Navigation */
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#090b10]/95 backdrop-blur-md border-t border-white/5 md:hidden flex justify-around items-center py-2.5 pb-5">
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        return (
           <button
-            onClick={() => setActiveTab('search')}
-            className={`p-2 rounded-full border transition-all ${
-              activeTab === 'search'
-                ? 'bg-[#00b4d8]/10 border-[#00b4d8] text-[#00b4d8]'
-                : 'bg-white/5 border-white/5 hover:border-white/10 text-slate-400 hover:text-white'
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex flex-col items-center gap-1.5 transition-colors ${
+              isActive ? 'text-[#00b4d8]' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Search className="w-4 h-4" />
+            <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[2]'}`} />
+            <span className="text-[10px] font-semibold tracking-wider uppercase">{tab.label}</span>
           </button>
-        </div>
-      </div>
-    </>
+        );
+      })}
+    </div>
   );
 }
+
