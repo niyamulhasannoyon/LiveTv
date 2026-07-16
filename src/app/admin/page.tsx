@@ -656,15 +656,21 @@ export default function PlatformControlMatrixHub() {
                           </td>
                           <td className="p-5">
                             {ch.status === 'Online' ? (
-                              <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl font-bold text-[9px] text-emerald-400 uppercase tracking-wider">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl font-bold text-[9px] text-emerald-400 uppercase tracking-wider">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                                 Online
                               </span>
                             ) : ch.status === 'Offline' ? (
-                              <span className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 rounded-xl font-bold text-[9px] text-rose-400 uppercase tracking-wider animate-pulse">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 rounded-xl font-bold text-[9px] text-rose-400 uppercase tracking-wider">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                                </span>
                                 Offline
                               </span>
                             ) : (
-                              <span className="px-2.5 py-1 bg-slate-500/10 border border-slate-500/20 rounded-xl font-bold text-[9px] text-slate-400 uppercase tracking-wider">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-500/10 border border-slate-500/20 rounded-xl font-bold text-[9px] text-slate-400 uppercase tracking-wider">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                                 Unknown
                               </span>
                             )}
