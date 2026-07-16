@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
@@ -89,12 +90,28 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
     if (!video || !urls || urls.length === 0) return;
 
     let currentStream = urls[urlIndex];
-    if (currentStream && currentStream.startsWith('http://')) {
+    if (currentStream && (currentStream.startsWith('http://') || currentStream.startsWith('https://')) && !isEmbed) {
       currentStream = `/api/stream?url=${encodeURIComponent(currentStream)}`;
     }
     let hls: Hls | null = null;
 
+    const reportError = async (failedUrl: string) => {
+      if (!channelName) return;
+      try {
+        await fetch('/api/channels/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channelName, url: failedUrl })
+        });
+      } catch (err) {
+        console.error('Error reporting stream failure:', err);
+      }
+    };
+
     const triggerFallback = () => {
+      const failedUrl = urls[urlIndex];
+      reportError(failedUrl);
+
       if (urlIndex < urls.length - 1) {
         setStatusMessage(`Source ${urlIndex + 1} offline. Connecting backup source ${urlIndex + 2}...`);
         setTimeout(() => {
@@ -147,7 +164,7 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
     return () => {
       if (hls) hls.destroy();
     };
-  }, [urls, urlIndex, isEmbed]);
+  }, [urls, urlIndex, isEmbed, channelName]);
 
   // Controls auto-hide trigger on cursor inactivity
   useEffect(() => {

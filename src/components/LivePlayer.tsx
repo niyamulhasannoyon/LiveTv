@@ -98,7 +98,7 @@ export default function LivePlayer({ title, subtitle, sources, onClose }: LivePl
       handleStreamError();
     };
 
-    const streamUrl = activeSource.url && activeSource.url.startsWith('http://')
+    const streamUrl = activeSource.url && (activeSource.url.startsWith('http://') || activeSource.url.startsWith('https://')) && !activeSource.isEmbed
       ? `/api/stream?url=${encodeURIComponent(activeSource.url)}`
       : activeSource.url;
 

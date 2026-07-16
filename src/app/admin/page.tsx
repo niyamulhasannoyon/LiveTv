@@ -2,7 +2,7 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, Tv, Database, Terminal, Users, Trash2, Plus, Sparkles } from 'lucide-react';
+import { Activity, Tv, Database, Terminal, Users, Trash2, Plus, Sparkles, Edit, RefreshCw } from 'lucide-react';
 import SafeImage from '../../components/SafeImage';
 
 interface IPTVChannel {
@@ -11,6 +11,8 @@ interface IPTVChannel {
   logo: string;
   category: string;
   urls: string[];
+  status?: string;
+  failure_count?: number;
 }
 
 interface NewChannelState {
@@ -54,6 +56,15 @@ export default function PlatformControlMatrixHub() {
   const [channels, setChannels] = useState<IPTVChannel[]>([]);
   const [formData, setFormData] = useState<NewChannelState>({ name: '', logo: '', category: '', url: '' });
   const [channelsLoading, setChannelsLoading] = useState(true);
+
+  // Edit Channel States
+  const [editingChannel, setEditingChannel] = useState<IPTVChannel | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<NewChannelState>({ name: '', logo: '', category: '', url: '' });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Health Check States
+  const [isHealthChecking, setIsHealthChecking] = useState(false);
 
   // Autocomplete Suggestions States
   const [suggestions, setSuggestions] = useState<IPTVChannel[]>([]);
@@ -230,7 +241,101 @@ export default function PlatformControlMatrixHub() {
     }
   };
 
+  const handleOpenEditModal = (ch: IPTVChannel) => {
+    setEditingChannel(ch);
+    setEditFormData({
+      name: ch.name,
+      logo: ch.logo || '',
+      category: ch.category || '',
+      url: ch.urls?.[0] || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingChannel || !editingChannel.id) return;
+    if (!editFormData.name || !editFormData.url) {
+      return alert('Name and URL parameters are mandatory.');
+    }
+
+    setIsEditSubmitting(true);
+    const channelPayload = {
+      id: editingChannel.id,
+      name: editFormData.name,
+      logo: editFormData.logo || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop',
+      category: editFormData.category || 'General',
+      urls: [editFormData.url]
+    };
+
+    try {
+      const res = await fetch('/api/admin/channels', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(channelPayload)
+      });
+
+      if (res.status === 401) {
+        setIsAuthenticated(false);
+        return;
+      }
+
+      if (res.ok) {
+        setIsEditModalOpen(false);
+        setEditingChannel(null);
+        fetchChannels();
+      } else {
+        const data = await res.json();
+        alert(`Failed to update channel: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error updating channel:', err);
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  const handleTriggerHealthCheck = async () => {
+    setIsHealthChecking(true);
+    try {
+      const res = await fetch('/api/admin/health-check', {
+        method: 'POST'
+      });
+      if (res.status === 401) {
+        setIsAuthenticated(false);
+        return;
+      }
+      if (res.ok) {
+        fetchChannels();
+        // Refresh analytics logs to display checker completed message
+        const statsRes = await fetch('/api/admin/analytics');
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setAnalytics(statsData);
+        }
+      } else {
+        const data = await res.json();
+        alert(`Failed to run health check: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error triggering health check:', err);
+    } finally {
+      setIsHealthChecking(false);
+    }
+  };
+
   const isGlobalLoading = analyticsLoading && channelsLoading;
+
+  const sortedChannels = [...channels].sort((a, b) => {
+    // Sort Offline status first
+    const isAOffline = a.status === 'Offline' ? 1 : 0;
+    const isBOffline = b.status === 'Offline' ? 1 : 0;
+    if (isAOffline !== isBOffline) {
+      return isBOffline - isAOffline;
+    }
+    // Then sort by failure count descending
+    return (b.failure_count || 0) - (a.failure_count || 0);
+  });
 
   if (isAuthenticated === null) {
     return (
@@ -282,6 +387,14 @@ export default function PlatformControlMatrixHub() {
                 Audience: <b className="text-white text-sm ml-1.5 font-extrabold">{analytics.concurrentUsers}</b> online
               </span>
             </div>
+            <button
+              onClick={handleTriggerHealthCheck}
+              disabled={isHealthChecking}
+              className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/30 text-cyan-400 disabled:opacity-50 font-extrabold text-xs px-5 py-3 rounded-2xl tracking-widest uppercase transition-all duration-300 cursor-pointer text-center flex items-center justify-center gap-2"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isHealthChecking ? 'animate-spin' : ''}`} />
+              {isHealthChecking ? 'Checking...' : 'Check Health'}
+            </button>
             <button 
               onClick={handleSignOut}
               className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/30 text-rose-400 font-extrabold text-xs px-5 py-3 rounded-2xl tracking-widest uppercase transition-all duration-300 cursor-pointer text-center"
@@ -514,13 +627,15 @@ export default function PlatformControlMatrixHub() {
                     <tr className="bg-[#090b14]/60 text-slate-400 font-bold border-b border-white/5 uppercase tracking-wider text-[10px]">
                       <th className="p-5">Visual Node</th>
                       <th className="p-5">Category Scope</th>
+                      <th className="p-5">Status</th>
+                      <th className="p-5">Failures</th>
                       <th className="p-5">Data Stream URL Reference</th>
                       <th className="p-5 text-right">Overrides</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {channels.length > 0 ? (
-                      channels.map((ch) => (
+                    {sortedChannels.length > 0 ? (
+                      sortedChannels.map((ch) => (
                         <tr key={ch.id} className="hover:bg-white/[0.02] transition-all">
                           <td className="p-5 flex items-center gap-3">
                             <div className="w-9 h-9 bg-white rounded-xl p-1 border border-white/5 relative overflow-hidden flex-shrink-0">
@@ -532,30 +647,65 @@ export default function PlatformControlMatrixHub() {
                                 className="object-contain p-1"
                               />
                             </div>
-                            <span className="font-extrabold text-slate-200 max-w-[200px] truncate tracking-wide">{ch.name}</span>
+                            <span className="font-extrabold text-slate-200 max-w-[160px] truncate tracking-wide">{ch.name}</span>
                           </td>
                           <td className="p-5">
                             <span className="px-2.5 py-1 bg-[#090b10]/80 border border-white/5 rounded-xl font-bold text-[9px] text-[#00b4d8] uppercase tracking-wider">
                               {ch.category}
                             </span>
                           </td>
-                          <td className="p-5 font-mono text-[10px] text-slate-500 truncate max-w-[260px]">
+                          <td className="p-5">
+                            {ch.status === 'Online' ? (
+                              <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl font-bold text-[9px] text-emerald-400 uppercase tracking-wider">
+                                Online
+                              </span>
+                            ) : ch.status === 'Offline' ? (
+                              <span className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 rounded-xl font-bold text-[9px] text-rose-400 uppercase tracking-wider animate-pulse">
+                                Offline
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 bg-slate-500/10 border border-slate-500/20 rounded-xl font-bold text-[9px] text-slate-400 uppercase tracking-wider">
+                                Unknown
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-5">
+                            {(ch.failure_count || 0) > 0 ? (
+                              <span className="font-mono text-rose-400 font-extrabold bg-rose-500/10 border border-rose-500/20 px-2.5 py-0.5 rounded-lg text-[9px]">
+                                {ch.failure_count} errors
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-400 font-bold bg-slate-500/10 border border-white/5 px-2 py-0.5 rounded-lg text-[9px]">
+                                0
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-5 font-mono text-[10px] text-slate-500 truncate max-w-[200px]">
                             {ch.urls?.[0]}
                           </td>
                           <td className="p-5 text-right">
-                            <button 
-                              onClick={() => handleDelete(ch.id)}
-                              className="text-[9px] bg-rose-600/10 text-rose-500 border border-rose-500/20 px-3.5 py-2 rounded-xl hover:bg-rose-600 hover:text-white transition-all font-bold tracking-widest flex items-center gap-1.5 ml-auto cursor-pointer uppercase"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Purge
-                            </button>
+                            <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => handleOpenEditModal(ch)}
+                                className="text-[9px] bg-cyan-600/10 text-cyan-400 border border-cyan-500/20 px-3 py-2 rounded-xl hover:bg-cyan-600 hover:text-white transition-all font-bold tracking-widest flex items-center gap-1 cursor-pointer uppercase"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(ch.id)}
+                                className="text-[9px] bg-rose-600/10 text-rose-500 border border-rose-500/20 px-3 py-2 rounded-xl hover:bg-rose-600 hover:text-white transition-all font-bold tracking-widest flex items-center gap-1 cursor-pointer uppercase"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Purge
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="p-8 text-center text-slate-500 font-bold uppercase tracking-wider">
+                        <td colSpan={6} className="p-8 text-center text-slate-500 font-bold uppercase tracking-wider">
                           No custom stream channels registered.
                         </td>
                       </tr>
@@ -569,6 +719,90 @@ export default function PlatformControlMatrixHub() {
         )}
 
       </div>
+
+      {/* Edit Modal Component Overlay */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
+          <div className="bg-[#141821] border border-white/10 rounded-3xl p-6 w-full max-w-xl shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Edit className="w-4 h-4 text-[#00b4d8]" />
+                <h3 className="text-xs font-black text-white uppercase tracking-widest">
+                  Modify Channel Node Configuration
+                </h3>
+              </div>
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-slate-400 hover:text-white text-xs uppercase tracking-wider font-bold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Channel Title</label>
+                <input 
+                  type="text" 
+                  value={editFormData.name}
+                  onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                  className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Category Scope</label>
+                <input 
+                  type="text" 
+                  value={editFormData.category}
+                  onChange={e => setEditFormData({...editFormData, category: e.target.value})}
+                  className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Logo URL</label>
+                <input 
+                  type="text" 
+                  value={editFormData.logo}
+                  onChange={e => setEditFormData({...editFormData, logo: e.target.value})}
+                  className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Direct Stream URL (M3U8)</label>
+                <input 
+                  type="text" 
+                  value={editFormData.url}
+                  onChange={e => setEditFormData({...editFormData, url: e.target.value})}
+                  className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-extrabold text-xs py-3.5 rounded-2xl transition-all uppercase tracking-widest cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isEditSubmitting}
+                  className="flex-1 bg-gradient-to-r from-[#00b4d8] to-indigo-600 text-white disabled:opacity-50 font-extrabold text-xs py-3.5 rounded-2xl hover:opacity-95 shadow-lg shadow-[#00b4d8]/10 hover:shadow-[#00b4d8]/20 transition-all uppercase tracking-widest cursor-pointer text-center"
+                >
+                  {isEditSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

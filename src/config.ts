@@ -107,7 +107,7 @@ export const siteConfig: SiteConfig = {
       startsIn: "02h 42m 55s",
       status: "upcoming",
       sources: [
-        { id: "src-arg-egy-1", name: "TSN SPORTS FHD", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }
+        { id: "src-arg-egy-1", name: "TSN SPORTS FHD", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }
       ]
     },
     {
@@ -120,7 +120,7 @@ export const siteConfig: SiteConfig = {
       startsIn: "04h 55m 41s",
       status: "upcoming",
       sources: [
-        { id: "src-fra-mar-1", name: "FOX ONE - AQ", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }
+        { id: "src-fra-mar-1", name: "FOX ONE - AQ", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }
       ]
     }
   ],
@@ -133,7 +133,7 @@ export const siteConfig: SiteConfig = {
       category: "Sports",
       isLive: true,
       metadata: "world-cup-bdix • Global",
-      sources: [{ id: "src-ch1", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch1", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-2",
@@ -142,7 +142,7 @@ export const siteConfig: SiteConfig = {
       category: "News",
       isLive: true,
       metadata: "aljazeera-stream • Global",
-      sources: [{ id: "src-ch2", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch2", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-3",
@@ -151,7 +151,7 @@ export const siteConfig: SiteConfig = {
       category: "News",
       isLive: true,
       metadata: "somoy-news • BD Local",
-      sources: [{ id: "src-ch3", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch3", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-4",
@@ -160,7 +160,7 @@ export const siteConfig: SiteConfig = {
       category: "Sports",
       isLive: true,
       metadata: "fox-sports • US",
-      sources: [{ id: "src-ch4", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch4", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-5",
@@ -169,7 +169,7 @@ export const siteConfig: SiteConfig = {
       category: "Entertainment",
       isLive: false,
       metadata: "bijoy-tv • BD Local",
-      sources: [{ id: "src-ch5", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch5", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-6",
@@ -178,7 +178,7 @@ export const siteConfig: SiteConfig = {
       category: "Entertainment",
       isLive: false,
       metadata: "asian-tv • BD Local",
-      sources: [{ id: "src-ch6", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch6", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-7",
@@ -187,7 +187,7 @@ export const siteConfig: SiteConfig = {
       category: "Entertainment",
       isLive: false,
       metadata: "channel-i • BD Local",
-      sources: [{ id: "src-ch7", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch7", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-8",
@@ -196,7 +196,7 @@ export const siteConfig: SiteConfig = {
       category: "Entertainment",
       isLive: false,
       metadata: "pogo-cartoon • Kids",
-      sources: [{ id: "src-ch8", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch8", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-9",
@@ -205,7 +205,7 @@ export const siteConfig: SiteConfig = {
       category: "Entertainment",
       isLive: true,
       metadata: "zee-cinema • Global",
-      sources: [{ id: "src-ch9", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch9", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-10",
@@ -214,7 +214,7 @@ export const siteConfig: SiteConfig = {
       category: "FIFA",
       isLive: true,
       metadata: "ayna-ott-playlists • Global",
-      sources: [{ id: "src-ch10", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch10", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-11",
@@ -223,7 +223,7 @@ export const siteConfig: SiteConfig = {
       category: "Sports",
       isLive: true,
       metadata: "ayna-ott-playlists • Global",
-      sources: [{ id: "src-ch11", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch11", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     },
     {
       id: "ch-12",
@@ -232,7 +232,7 @@ export const siteConfig: SiteConfig = {
       category: "WORLD CUP",
       isLive: true,
       metadata: "ayna-ott-playlists • Global",
-      sources: [{ id: "src-ch12", name: "Server 1", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }]
+      sources: [{ id: "src-ch12", name: "Server 1", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }]
     }
   ],
 
@@ -247,7 +247,7 @@ export const siteConfig: SiteConfig = {
       startsIn: "02h 42m 55s",
       status: "upcoming",
       sources: [
-        { id: "src-1a", name: "TSN SPORTS FHD", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }
+        { id: "src-1a", name: "TSN SPORTS FHD", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }
       ]
     },
     {
@@ -260,7 +260,7 @@ export const siteConfig: SiteConfig = {
       liveScore: "188'",
       status: "live",
       sources: [
-        { id: "src-2a", name: "FOX ONE - AQ", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }
+        { id: "src-2a", name: "FOX ONE - AQ", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }
       ]
     },
     {
@@ -273,7 +273,7 @@ export const siteConfig: SiteConfig = {
       startsIn: "1d 21h",
       status: "upcoming",
       sources: [
-        { id: "src-3a", name: "Willow TV", url: "https://test-streams.mux.dev/x36xhg/main.m3u8", status: "Stable" }
+        { id: "src-3a", name: "Willow TV", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", status: "Stable" }
       ]
     }
   ],

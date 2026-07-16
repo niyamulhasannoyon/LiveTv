@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { initHealthCheckScheduler } from '../../../lib/healthCheck';
 
 interface IPTVChannel {
   id?: string;
@@ -9,6 +10,8 @@ interface IPTVChannel {
   category: string;
   urls: string[];
   country?: string;
+  status?: 'Online' | 'Offline';
+  failure_count?: number;
 }
 
 const dataPath = path.join(process.cwd(), 'data', 'custom_channels.json');
@@ -44,6 +47,9 @@ function normalizeCategory(category: string): string {
 
 export async function GET() {
   try {
+    // Initialize background health check scheduler
+    initHealthCheckScheduler();
+
     // We will fetch Bangladesh (BD), India (IN) and Global Sports channels concurrently.
     const sources = [
       { url: 'https://iptv-org.github.io/iptv/countries/bd.m3u', country: 'Bangladesh' },

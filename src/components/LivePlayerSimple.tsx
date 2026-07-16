@@ -23,8 +23,11 @@ export default function LivePlayerSimple({ urls = [] }: LivePlayerSimpleProps) {
     if (!video || !urls || urls.length === 0) return;
 
     let currentStream = urls[urlIndex];
-    if (currentStream && currentStream.startsWith('http://')) {
-      currentStream = `/api/stream?url=${encodeURIComponent(currentStream)}`;
+    if (currentStream && (currentStream.startsWith('http://') || currentStream.startsWith('https://'))) {
+      const isEmbed = currentStream.includes('youtube.com') || currentStream.includes('youtu.be') || currentStream.includes('twitch.tv');
+      if (!isEmbed) {
+        currentStream = `/api/stream?url=${encodeURIComponent(currentStream)}`;
+      }
     }
     let hls: Hls | null = null;
 
