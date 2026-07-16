@@ -3,6 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import { initHealthCheckScheduler } from '../../../lib/healthCheck';
 
+import { db } from '../../../lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { migrateLocalChannelsToFirestore } from '../../../lib/migrate';
+
 interface IPTVChannel {
   id?: string;
   name: string;
@@ -10,20 +14,36 @@ interface IPTVChannel {
   category: string;
   urls: string[];
   country?: string;
-  status?: 'Online' | 'Offline';
+  status?: string;
   failure_count?: number;
+  isGeoBlocked?: boolean;
 }
 
-const dataPath = path.join(process.cwd(), 'data', 'custom_channels.json');
-
-function readCustomChannels(): IPTVChannel[] {
+async function readCustomChannels(): Promise<IPTVChannel[]> {
   try {
-    if (fs.existsSync(dataPath)) {
-      const content = fs.readFileSync(dataPath, 'utf8');
-      return JSON.parse(content) as IPTVChannel[];
-    }
+    await migrateLocalChannelsToFirestore();
+
+    const channelsCol = collection(db, 'channels');
+    const snapshot = await getDocs(channelsCol);
+    const customChannels: IPTVChannel[] = [];
+    
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      customChannels.push({
+        id: doc.id,
+        name: data.name || '',
+        logo: data.logo || '',
+        category: data.category || 'General',
+        urls: data.urls || (data.url ? [data.url] : []),
+        country: data.country || 'Bangladesh',
+        status: data.status || 'Smooth',
+        failure_count: data.failureCount ?? data.failure_count ?? 0,
+        isGeoBlocked: !!data.isGeoBlocked
+      });
+    });
+    return customChannels;
   } catch (e) {
-    console.error('Error reading custom channels in feed:', e);
+    console.error('Error reading custom channels from Firestore in feed:', e);
   }
   return [];
 }
@@ -71,7 +91,7 @@ export async function GET() {
     });
 
     const results = await Promise.allSettled(fetchPromises);
-    const customChannels = readCustomChannels();
+    const customChannels = await readCustomChannels();
     
     // Grouping map to filter duplicates and merge URLs
     const channelsMap: Record<string, IPTVChannel> = {};
@@ -118,7 +138,7 @@ export async function GET() {
     return NextResponse.json(combined);
   } catch (error: unknown) {
     try {
-      const customChannels = readCustomChannels();
+      const customChannels = await readCustomChannels();
       if (customChannels.length > 0) {
         return NextResponse.json(customChannels);
       }

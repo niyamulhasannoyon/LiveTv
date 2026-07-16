@@ -13,6 +13,8 @@ interface IPTVChannel {
   urls: string[];
   status?: string;
   failure_count?: number;
+  isGeoBlocked?: boolean;
+  country?: string;
 }
 
 interface NewChannelState {
@@ -20,6 +22,8 @@ interface NewChannelState {
   logo: string;
   category: string;
   url: string;
+  country: string;
+  isGeoBlocked: boolean;
 }
 
 interface ActiveSession {
@@ -54,13 +58,13 @@ export default function PlatformControlMatrixHub() {
 
   // Channel States
   const [channels, setChannels] = useState<IPTVChannel[]>([]);
-  const [formData, setFormData] = useState<NewChannelState>({ name: '', logo: '', category: '', url: '' });
+  const [formData, setFormData] = useState<NewChannelState>({ name: '', logo: '', category: '', url: '', country: 'Global Sports', isGeoBlocked: false });
   const [channelsLoading, setChannelsLoading] = useState(true);
 
   // Edit Channel States
   const [editingChannel, setEditingChannel] = useState<IPTVChannel | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState<NewChannelState>({ name: '', logo: '', category: '', url: '' });
+  const [editFormData, setEditFormData] = useState<NewChannelState>({ name: '', logo: '', category: '', url: '', country: 'Global Sports', isGeoBlocked: false });
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Health Check States
@@ -93,10 +97,47 @@ export default function PlatformControlMatrixHub() {
   }, [router]);
 
   useEffect(() => {
-    if (isAuthenticated === true) {
-      fetchChannels();
-      fetchSuggestions();
+    if (isAuthenticated !== true) return;
+    
+    fetchSuggestions();
+
+    let unsubscribe: (() => void) | null = null;
+    async function setupRealtimeListener() {
+      try {
+        const { db } = await import('@/lib/firebase');
+        const { collection, onSnapshot } = await import('firebase/firestore');
+
+        unsubscribe = onSnapshot(collection(db, 'channels'), (snapshot) => {
+          const customChannels: IPTVChannel[] = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            customChannels.push({
+              id: doc.id,
+              name: data.name || '',
+              logo: data.logo || '',
+              category: data.category || 'General',
+              urls: data.urls || (data.url ? [data.url] : []),
+              country: data.country || 'Global Sports',
+              status: data.status || 'Smooth',
+              failure_count: data.failureCount ?? data.failure_count ?? 0,
+              isGeoBlocked: !!data.isGeoBlocked
+            });
+          });
+          setChannels(customChannels);
+          setChannelsLoading(false);
+        });
+      } catch (err) {
+        console.error('Error setting up admin real-time listener:', err);
+        setChannelsLoading(false);
+      }
     }
+    setupRealtimeListener();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [isAuthenticated]);
 
   async function fetchSuggestions() {
@@ -118,7 +159,9 @@ export default function PlatformControlMatrixHub() {
       name: ch.name,
       logo: ch.logo || '',
       category: ch.category || '',
-      url: ch.urls?.[0] || ''
+      url: ch.urls?.[0] || '',
+      country: ch.country || 'Global Sports',
+      isGeoBlocked: !!ch.isGeoBlocked
     });
     setShowSuggestions(false);
   };
@@ -155,21 +198,7 @@ export default function PlatformControlMatrixHub() {
   }, [isAuthenticated]);
 
   async function fetchChannels() {
-    try {
-      const res = await fetch('/api/admin/channels');
-      if (res.status === 401) {
-        setIsAuthenticated(false);
-        return;
-      }
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setChannels(data);
-      }
-    } catch (err) {
-      console.error('Error fetching admin channels:', err);
-    } finally {
-      setChannelsLoading(false);
-    }
+    // Channels are loaded and kept updated in real-time by the onSnapshot listener
   }
 
   const handleSignOut = async () => {
@@ -193,25 +222,22 @@ export default function PlatformControlMatrixHub() {
       name: formData.name,
       logo: formData.logo || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop',
       category: formData.category || 'General',
-      urls: [formData.url]
+      url: formData.url,
+      urls: [formData.url],
+      country: formData.country || 'Global Sports',
+      status: 'Smooth',
+      lastChecked: new Date().toISOString(),
+      failureCount: 0,
+      failure_count: 0,
+      isGeoBlocked: !!formData.isGeoBlocked
     };
 
     try {
-      const res = await fetch('/api/admin/channels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(channelPayload)
-      });
-
-      if (res.status === 401) {
-        setIsAuthenticated(false);
-        return;
-      }
-
-      if (res.ok) {
-        setFormData({ name: '', logo: '', category: '', url: '' });
-        fetchChannels();
-      }
+      const { db } = await import('@/lib/firebase');
+      const { collection, addDoc } = await import('firebase/firestore');
+      await addDoc(collection(db, 'channels'), channelPayload);
+      
+      setFormData({ name: '', logo: '', category: '', url: '', country: 'Global Sports', isGeoBlocked: false });
     } catch (err) {
       console.error('Error submitting new channel:', err);
     }
@@ -222,20 +248,9 @@ export default function PlatformControlMatrixHub() {
     if (!confirm('Are you absolutely sure you want to drop this network channel node?')) return;
     
     try {
-      const res = await fetch('/api/admin/channels', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      });
-
-      if (res.status === 401) {
-        setIsAuthenticated(false);
-        return;
-      }
-
-      if (res.ok) {
-        fetchChannels();
-      }
+      const { db } = await import('@/lib/firebase');
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'channels', id));
     } catch (err) {
       console.error('Error purging channel:', err);
     }
@@ -247,7 +262,9 @@ export default function PlatformControlMatrixHub() {
       name: ch.name,
       logo: ch.logo || '',
       category: ch.category || '',
-      url: ch.urls?.[0] || ''
+      url: ch.urls?.[0] || '',
+      country: ch.country || 'Global Sports',
+      isGeoBlocked: !!ch.isGeoBlocked
     });
     setIsEditModalOpen(true);
   };
@@ -261,35 +278,29 @@ export default function PlatformControlMatrixHub() {
 
     setIsEditSubmitting(true);
     const channelPayload = {
-      id: editingChannel.id,
       name: editFormData.name,
       logo: editFormData.logo || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop',
       category: editFormData.category || 'General',
-      urls: [editFormData.url]
+      url: editFormData.url,
+      urls: [editFormData.url],
+      country: editFormData.country || 'Global Sports',
+      status: 'Smooth',
+      lastChecked: new Date().toISOString(),
+      failureCount: 0,
+      failure_count: 0,
+      isGeoBlocked: !!editFormData.isGeoBlocked
     };
 
     try {
-      const res = await fetch('/api/admin/channels', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(channelPayload)
-      });
+      const { db } = await import('@/lib/firebase');
+      const { doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'channels', editingChannel.id), channelPayload);
 
-      if (res.status === 401) {
-        setIsAuthenticated(false);
-        return;
-      }
-
-      if (res.ok) {
-        setIsEditModalOpen(false);
-        setEditingChannel(null);
-        fetchChannels();
-      } else {
-        const data = await res.json();
-        alert(`Failed to update channel: ${data.error || 'Unknown error'}`);
-      }
+      setIsEditModalOpen(false);
+      setEditingChannel(null);
     } catch (err) {
       console.error('Error updating channel:', err);
+      alert('Failed to update channel.');
     } finally {
       setIsEditSubmitting(false);
     }
@@ -600,6 +611,26 @@ export default function PlatformControlMatrixHub() {
                     className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner placeholder:text-slate-600"
                   />
                 </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Origin Country</label>
+                  <input 
+                    type="text" placeholder="e.g. Bangladesh, India, Global Sports" value={formData.country}
+                    onChange={e => setFormData({...formData, country: e.target.value})}
+                    className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner placeholder:text-slate-600"
+                  />
+                </div>
+                <div className="flex items-center gap-3 bg-[#090b14]/40 border border-white/5 rounded-2xl px-4 py-3 h-[46px] mt-5">
+                  <input 
+                    type="checkbox" 
+                    id="add-isGeoBlocked"
+                    checked={formData.isGeoBlocked}
+                    onChange={e => setFormData({...formData, isGeoBlocked: e.target.checked})}
+                    className="accent-[#00b4d8] h-4 w-4 rounded cursor-pointer"
+                  />
+                  <label htmlFor="add-isGeoBlocked" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer select-none">
+                    GeoIP Restricted (VPN required)
+                  </label>
+                </div>
                 
                 <button type="submit" className="md:col-span-2 bg-gradient-to-r from-[#00b4d8] to-indigo-600 text-white font-extrabold text-xs py-4 rounded-2xl hover:opacity-95 shadow-lg shadow-[#00b4d8]/10 hover:shadow-[#00b4d8]/20 transition-all uppercase tracking-widest mt-2 flex items-center justify-center gap-2 cursor-pointer">
                   ⚡ Add Custom Stream Node
@@ -647,7 +678,20 @@ export default function PlatformControlMatrixHub() {
                                 className="object-contain p-1"
                               />
                             </div>
-                            <span className="font-extrabold text-slate-200 max-w-[160px] truncate tracking-wide">{ch.name}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-extrabold text-slate-200 max-w-[160px] truncate tracking-wide flex items-center gap-1.5">
+                                {ch.name}
+                                {ch.isGeoBlocked && (
+                                  <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1 rounded font-black cursor-help" title="Geo-blocked stream. May require VPN.">Ⓖ</span>
+                                )}
+                                {(ch.urls?.[0]?.includes('youtube.com') || ch.urls?.[0]?.includes('youtu.be')) && (
+                                  <span className="text-[9px] bg-red-500/20 text-red-400 border border-red-500/30 px-1 rounded font-black cursor-help" title="YouTube Live stream.">Ⓨ</span>
+                                )}
+                              </span>
+                              {ch.country && (
+                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{ch.country}</span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-5">
                             <span className="px-2.5 py-1 bg-[#090b10]/80 border border-white/5 rounded-xl font-bold text-[9px] text-[#00b4d8] uppercase tracking-wider">
@@ -787,6 +831,29 @@ export default function PlatformControlMatrixHub() {
                   className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner"
                   required
                 />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Origin Country</label>
+                <input 
+                  type="text" 
+                  value={editFormData.country}
+                  onChange={e => setEditFormData({...editFormData, country: e.target.value})}
+                  className="bg-[#090b14]/80 border border-white/5 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00b4d8] focus:ring-1 focus:ring-[#00b4d8]/30 transition-all font-medium text-xs shadow-inner"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 bg-[#090b14]/40 border border-white/5 rounded-2xl px-4 py-3 h-[46px]">
+                <input 
+                  type="checkbox" 
+                  id="edit-isGeoBlocked"
+                  checked={editFormData.isGeoBlocked}
+                  onChange={e => setEditFormData({...editFormData, isGeoBlocked: e.target.checked})}
+                  className="accent-[#00b4d8] h-4 w-4 rounded cursor-pointer"
+                />
+                <label htmlFor="edit-isGeoBlocked" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer select-none">
+                  GeoIP Restricted (VPN required)
+                </label>
               </div>
 
               <div className="flex gap-3 pt-2">

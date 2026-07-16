@@ -8,6 +8,9 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, RefreshCw, Tv } from 'lucide-
 interface CustomPlayerProps {
   urls: string[];
   channelName?: string;
+  isGeoBlocked?: boolean;
+  country?: string;
+  channelId?: string;
 }
 
 function getEmbedUrl(url: string): string | null {
@@ -40,7 +43,7 @@ function getEmbedUrl(url: string): string | null {
   return null;
 }
 
-export default function CustomPlayer({ urls = [], channelName }: CustomPlayerProps) {
+export default function CustomPlayer({ urls = [], channelName, isGeoBlocked, country, channelId }: CustomPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -104,7 +107,24 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
           body: JSON.stringify({ channelName, url: failedUrl })
         });
       } catch (err) {
-        console.error('Error reporting stream failure:', err);
+        console.error('Error reporting stream failure via API:', err);
+      }
+
+      if (channelId) {
+        try {
+          const { db } = await import('@/lib/firebase');
+          const { doc, updateDoc, increment } = await import('firebase/firestore');
+          const channelRef = doc(db, 'channels', channelId);
+          await updateDoc(channelRef, {
+            status: 'Failed',
+            failureCount: increment(1),
+            failure_count: increment(1),
+            lastChecked: new Date().toISOString()
+          });
+          console.log(`[CustomPlayer] Direct Firestore update: channel "${channelName}" marked Failed.`);
+        } catch (err) {
+          console.error('[CustomPlayer] Error reporting stream failure directly to Firestore:', err);
+        }
       }
     };
 
@@ -344,6 +364,14 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
       onMouseEnter={() => setShowControls(true)}
       className="relative group w-full aspect-video bg-black rounded-3xl overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.6)] border border-white/5"
     >
+      {/* GeoIP Restriction Alert Banner */}
+      {isGeoBlocked && (
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-amber-600/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-amber-500/20 text-[10px] font-bold text-white shadow-lg animate-pulse tracking-wide select-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
+          <span>GeoIP Restricted: Requires {country || 'Origin'} VPN</span>
+        </div>
+      )}
+
       {/* Fallback & Buffer Status Notice overlay */}
       {statusMessage && (
         <div className="absolute inset-0 bg-[#090b10]/90 backdrop-blur-md flex items-center justify-center p-4 text-center z-20 text-yellow-400 font-medium text-xs md:text-sm animate-pulse tracking-wide select-none">

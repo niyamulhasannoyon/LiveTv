@@ -14,11 +14,15 @@ import SearchTab from '../components/SearchTab';
 const CustomPlayer = dynamic(() => import('../components/CustomPlayer'), { ssr: false });
 
 interface IPTVChannel {
+  id?: string;
   name: string;
   logo: string;
   category: string;
   urls: string[];
   country?: string;
+  isGeoBlocked?: boolean;
+  status?: string;
+  failure_count?: number;
 }
 
 const getCountryIcon = (countryName: string) => {
@@ -58,16 +62,15 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'channels' | 'upcoming' | 'search'>('home');
   const [channels, setChannels] = useState<IPTVChannel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<IPTVChannel | null>(null);
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedCountry, setSelectedCountry] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync tab status with global navbar events and handle initial route
+  // Sync tab status query parameter on mount
   useEffect(() => {
-    // Check initial search params
     const params = new URLSearchParams(window.location.search);
     const initialTab = params.get('tab');
     if (initialTab && ['home', 'channels', 'upcoming', 'search'].includes(initialTab)) {
@@ -75,10 +78,11 @@ export default function Home() {
     }
 
     const handleTabChangeEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      setActiveTab(customEvent.detail as any);
+      const detail = (e as CustomEvent).detail;
+      if (detail && ['home', 'channels', 'upcoming', 'search'].includes(detail)) {
+        setActiveTab(detail);
+      }
     };
-
     window.addEventListener('tab-change', handleTabChangeEvent);
     return () => {
       window.removeEventListener('tab-change', handleTabChangeEvent);
@@ -94,6 +98,9 @@ export default function Home() {
   };
 
   useEffect(() => {
+    let externalChannels: IPTVChannel[] = [];
+    let unsubscribe: (() => void) | null = null;
+
     async function initPlatform() {
       try {
         const res = await fetch('/api/channels');
@@ -110,6 +117,8 @@ export default function Home() {
           throw new Error("Invalid channel data format received from API.");
         }
 
+        // Separate custom channels (which have id) from external channels
+        externalChannels = data.filter((c: IPTVChannel) => !c.id);
         setChannels(data);
 
         // Load favorites from local client storage
@@ -122,6 +131,45 @@ export default function Home() {
         if (defaultChannel) {
           setSelectedChannel(defaultChannel);
         }
+
+        // Set up real-time listener for custom channels from Firestore
+        const { db } = await import('@/lib/firebase');
+        const { collection, onSnapshot } = await import('firebase/firestore');
+
+        unsubscribe = onSnapshot(collection(db, 'channels'), (snapshot) => {
+          const updatedCustomChannels: IPTVChannel[] = [];
+          snapshot.forEach((doc) => {
+            const val = doc.data();
+            updatedCustomChannels.push({
+              id: doc.id,
+              name: val.name || '',
+              logo: val.logo || '',
+              category: val.category || 'General',
+              urls: val.urls || (val.url ? [val.url] : []),
+              country: val.country || 'Bangladesh',
+              status: val.status || 'Smooth',
+              failure_count: val.failureCount ?? val.failure_count ?? 0,
+              isGeoBlocked: !!val.isGeoBlocked
+            });
+          });
+
+          // Re-merge external channels with updated custom channels
+          const customNames = new Set(updatedCustomChannels.map(c => c.name.toLowerCase()));
+          const filteredExternal = externalChannels.filter(c => !customNames.has(c.name.toLowerCase()));
+          
+          const merged = [...updatedCustomChannels, ...filteredExternal];
+          setChannels(merged);
+
+          // Update currently selected channel if it was updated
+          setSelectedChannel((prev) => {
+            if (!prev) return null;
+            const updatedMatch = updatedCustomChannels.find(c => c.name.toLowerCase() === prev.name.toLowerCase());
+            if (updatedMatch) {
+              return updatedMatch;
+            }
+            return prev;
+          });
+        });
       } catch (err: any) {
         console.error("Platform Init Error:", err);
         setError(err.message || "Failed to initialize live TV streams.");
@@ -130,6 +178,12 @@ export default function Home() {
       }
     }
     initPlatform();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Map IPTVChannel[] to Channel[] for compatibility with sub-components
@@ -386,6 +440,9 @@ export default function Home() {
               <CustomPlayer 
                 urls={selectedChannel ? selectedChannel.urls : []} 
                 channelName={selectedChannel?.name}
+                isGeoBlocked={selectedChannel?.isGeoBlocked}
+                country={selectedChannel?.country}
+                channelId={selectedChannel?.id}
               />
               {selectedChannel && (
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase tracking-wider bg-white/5 border border-white/5 rounded-2xl px-4 py-2.5">

@@ -1,3 +1,5 @@
+import { db } from './firebase';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import fs from 'fs';
 import path from 'path';
 
@@ -7,11 +9,12 @@ interface IPTVChannel {
   logo: string;
   category: string;
   urls: string[];
-  status?: 'Online' | 'Offline';
+  status?: string;
   failure_count?: number;
+  isGeoBlocked?: boolean;
+  country?: string;
 }
 
-const dataPath = path.join(process.cwd(), 'data', 'custom_channels.json');
 const analyticsPath = path.join(process.cwd(), 'data', 'analytics.json');
 
 // Check the status of a specific URL
@@ -37,44 +40,49 @@ async function checkUrlStatus(url: string): Promise<boolean> {
   }
 }
 
-// Run health checks on all custom channels
+// Run health checks on all custom channels from Firestore
 export async function runHealthCheck(): Promise<void> {
-  if (!fs.existsSync(dataPath)) {
-    return;
-  }
-
   try {
-    const fileContent = fs.readFileSync(dataPath, 'utf8');
-    const channels = JSON.parse(fileContent) as IPTVChannel[];
-
-    if (!Array.isArray(channels) || channels.length === 0) {
+    console.log(`[HealthCheck] Commencing ping checks for Firestore custom channels...`);
+    const channelsCol = collection(db, 'channels');
+    const snapshot = await getDocs(channelsCol);
+    
+    if (snapshot.empty) {
+      console.log('[HealthCheck] No custom channels found in Firestore to audit.');
       return;
     }
 
-    console.log(`[HealthCheck] Commencing ping checks for ${channels.length} custom channels...`);
+    const channels: { docId: string; name: string; url: string }[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const urls = data.urls || (data.url ? [data.url] : []);
+      if (urls.length > 0) {
+        channels.push({
+          docId: doc.id,
+          name: data.name || 'Unnamed',
+          url: urls[0]
+        });
+      }
+    });
 
-    // Perform checks in parallel
-    const updatedChannels = await Promise.all(
+    console.log(`[HealthCheck] Pinging ${channels.length} channel nodes...`);
+
+    // Perform checks in parallel and update Firestore
+    await Promise.all(
       channels.map(async (ch) => {
-        if (!ch.urls || ch.urls.length === 0) {
-          return { ...ch, status: 'Offline' as const };
-        }
+        const isOnline = await checkUrlStatus(ch.url);
+        const nextStatus = isOnline ? 'Smooth' : 'Failed';
 
-        // We check the first/primary URL
-        const primaryUrl = ch.urls[0];
-        const isOnline = await checkUrlStatus(primaryUrl);
-        const nextStatus = isOnline ? ('Online' as const) : ('Offline' as const);
-
-        return {
-          ...ch,
-          status: nextStatus
-        };
+        const channelRef = doc(db, 'channels', ch.docId);
+        await updateDoc(channelRef, {
+          status: nextStatus,
+          lastChecked: new Date().toISOString()
+        });
+        console.log(`[HealthCheck] Channel "${ch.name}" evaluated: ${nextStatus}`);
       })
     );
 
-    // Write updated channels back to disk
-    fs.writeFileSync(dataPath, JSON.stringify(updatedChannels, null, 2));
-    console.log('[HealthCheck] Custom channels statuses updated successfully.');
+    console.log('[HealthCheck] Firestore custom channels statuses updated successfully.');
 
     // Append completion log to analytics
     try {
@@ -84,7 +92,7 @@ export async function runHealthCheck(): Promise<void> {
         analyticsData.logHistory = analyticsData.logHistory || [];
         analyticsData.logHistory.push({
           timestamp: new Date().toISOString(),
-          event: `Automated health check executed. Updated ${updatedChannels.length} channel nodes.`
+          event: `Automated health check executed. Updated ${snapshot.size} channel nodes in Firestore.`
         });
         if (analyticsData.logHistory.length > 100) {
           analyticsData.logHistory = analyticsData.logHistory.slice(-100);
@@ -95,7 +103,7 @@ export async function runHealthCheck(): Promise<void> {
       console.error('[HealthCheck] Error updating analytics log history:', err);
     }
   } catch (err) {
-    console.error('[HealthCheck] Error during execution:', err);
+    console.error('[HealthCheck] Error during Firestore execution:', err);
   }
 }
 

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { db } from '../../../../lib/firebase';
+import { collection, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
 
 interface IPTVChannel {
   id?: string;
@@ -8,11 +10,12 @@ interface IPTVChannel {
   logo: string;
   category: string;
   urls: string[];
-  status?: 'Online' | 'Offline';
+  status?: string;
   failure_count?: number;
+  isGeoBlocked?: boolean;
+  country?: string;
 }
 
-const dataPath = path.join(process.cwd(), 'data', 'custom_channels.json');
 const analyticsPath = path.join(process.cwd(), 'data', 'analytics.json');
 
 export async function POST(request: Request) {
@@ -24,29 +27,35 @@ export async function POST(request: Request) {
 
     console.log(`[ErrorReporter] Received playback error for channel: "${channelName}" (URL: ${url || 'unknown'})`);
 
-    // 1. Update failure count and status in custom_channels.json (if it is a custom channel)
+    // 1. Update failure count and status in Firestore (if it is a custom channel)
     let isCustomChannel = false;
-    if (fs.existsSync(dataPath)) {
-      try {
-        const fileContent = fs.readFileSync(dataPath, 'utf8');
-        const channels = JSON.parse(fileContent) as IPTVChannel[];
+    try {
+      const channelsCol = collection(db, 'channels');
+      const snapshot = await getDocs(channelsCol);
+      let targetDocId: string | null = null;
+      let currentFailures = 0;
 
-        if (Array.isArray(channels)) {
-          const index = channels.findIndex(
-            c => c.name.toLowerCase() === channelName.toLowerCase()
-          );
-
-          if (index !== -1) {
-            isCustomChannel = true;
-            channels[index].failure_count = (channels[index].failure_count || 0) + 1;
-            channels[index].status = 'Offline'; // Mark offline due to report
-            fs.writeFileSync(dataPath, JSON.stringify(channels, null, 2));
-            console.log(`[ErrorReporter] Custom channel "${channelName}" updated. Failures: ${channels[index].failure_count}`);
-          }
+      snapshot.forEach((doc) => {
+        const val = doc.data();
+        if (val.name && val.name.toLowerCase() === channelName.toLowerCase()) {
+          targetDocId = doc.id;
+          currentFailures = val.failureCount ?? val.failure_count ?? 0;
         }
-      } catch (err) {
-        console.error('[ErrorReporter] Failed to update custom channel failure count:', err);
+      });
+
+      if (targetDocId) {
+        isCustomChannel = true;
+        const channelRef = doc(db, 'channels', targetDocId);
+        await updateDoc(channelRef, {
+          status: 'Failed',
+          failureCount: increment(1),
+          failure_count: increment(1),
+          lastChecked: new Date().toISOString()
+        });
+        console.log(`[ErrorReporter] Custom channel "${channelName}" updated in Firestore. Previous failures: ${currentFailures}`);
       }
+    } catch (err) {
+      console.error('[ErrorReporter] Failed to update Firestore channel failure count:', err);
     }
 
     // 2. Append event to analytics log history

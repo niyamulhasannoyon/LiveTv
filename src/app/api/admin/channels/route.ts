@@ -11,6 +11,8 @@ interface IPTVChannel {
   urls: string[];
   status?: 'Online' | 'Offline';
   failure_count?: number;
+  isGeoBlocked?: boolean;
+  country?: string;
 }
 
 const dataPath = path.join(process.cwd(), 'data', 'custom_channels.json');
