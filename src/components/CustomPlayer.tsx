@@ -9,6 +9,36 @@ interface CustomPlayerProps {
   channelName?: string;
 }
 
+function getEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  
+  // YouTube watch or short links
+  const ytWatchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]+)/);
+  if (ytWatchMatch) {
+    return `https://www.youtube.com/embed/${ytWatchMatch[1]}?autoplay=1&mute=1`;
+  }
+  
+  // YouTube live channel handle links (e.g. youtube.com/@handle/live)
+  const ytLiveMatch = url.match(/youtube\.com\/@([a-zA-Z0-9_-]+)\/live/);
+  if (ytLiveMatch) {
+    return `https://www.youtube.com/embed/live_stream?channel=${ytLiveMatch[1]}`;
+  }
+
+  // Embed links
+  if (url.includes('youtube.com/embed/')) {
+    return url;
+  }
+  
+  // Twitch links
+  const twitchMatch = url.match(/twitch\.tv\/([a-zA-Z0-9_-]+)/);
+  if (twitchMatch) {
+    const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+    return `https://player.twitch.tv/?channel=${twitchMatch[1]}&parent=${host}&autoplay=true&muted=true`;
+  }
+  
+  return null;
+}
+
 export default function CustomPlayer({ urls = [], channelName }: CustomPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,6 +49,10 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
   const [statusMessage, setStatusMessage] = useState('');
   const [showControls, setShowControls] = useState(true);
   const [showIndicator, setShowIndicator] = useState<'play' | 'pause' | null>(null);
+
+  const currentStream = urls[urlIndex] || '';
+  const embedUrl = getEmbedUrl(currentStream);
+  const isEmbed = !!embedUrl;
 
   // Reset stream index when urls change
   useEffect(() => {
@@ -37,13 +71,20 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
   // Save volume changes
   useEffect(() => {
     localStorage.setItem('player-volume', volume.toString());
-    if (videoRef.current) {
+    if (videoRef.current && !isEmbed) {
       videoRef.current.volume = volume;
     }
-  }, [volume]);
+  }, [volume, isEmbed]);
 
   // Main playback and HLS validation logic
   useEffect(() => {
+    if (isEmbed) {
+      const timer = setTimeout(() => {
+        setIsPlaying(true);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
     const video = videoRef.current;
     if (!video || !urls || urls.length === 0) return;
 
@@ -106,7 +147,7 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
     return () => {
       if (hls) hls.destroy();
     };
-  }, [urls, urlIndex]);
+  }, [urls, urlIndex, isEmbed]);
 
   // Controls auto-hide trigger on cursor inactivity
   useEffect(() => {
@@ -153,6 +194,7 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
   };
 
   const togglePlay = () => {
+    if (isEmbed) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -169,6 +211,7 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
   };
 
   const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isEmbed) return;
     const val = parseFloat(e.target.value);
     setVolume(val);
     if (videoRef.current) {
@@ -179,6 +222,7 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
   };
 
   const toggleMute = () => {
+    if (isEmbed) return;
     setIsMuted(prev => {
       const targetMute = !prev;
       if (videoRef.current) {
@@ -211,6 +255,7 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
   };
 
   const togglePictureInPicture = async () => {
+    if (isEmbed) return;
     const video = videoRef.current;
     if (!video) return;
     try {
@@ -242,11 +287,11 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
       switch (e.key.toLowerCase()) {
         case ' ': // Space for play/pause
           e.preventDefault();
-          togglePlay();
+          if (!isEmbed) togglePlay();
           break;
         case 'm': // M for mute/unmute
           e.preventDefault();
-          toggleMute();
+          if (!isEmbed) toggleMute();
           break;
         case 'f': // F for fullscreen
           e.preventDefault();
@@ -254,7 +299,7 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
           break;
         case 'p': // P for picture-in-picture
           e.preventDefault();
-          togglePictureInPicture();
+          if (!isEmbed) togglePictureInPicture();
           break;
         default:
           break;
@@ -265,7 +310,8 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmbed]);
 
   const handleManualRefresh = () => {
     setStatusMessage('');
@@ -288,16 +334,25 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
         </div>
       )}
 
-      {/* Main Video element */}
-      <video 
-        ref={videoRef} 
-        onClick={togglePlay}
-        className="w-full h-full cursor-pointer object-contain"
-        playsInline
-      />
+      {/* Main Video element or Iframe Embed */}
+      {isEmbed ? (
+        <iframe 
+          src={embedUrl} 
+          className="w-full h-full border-0 z-10"
+          allowFullScreen
+          allow="autoplay; encrypted-media; picture-in-picture"
+        />
+      ) : (
+        <video 
+          ref={videoRef} 
+          onClick={togglePlay}
+          className="w-full h-full cursor-pointer object-contain"
+          playsInline
+        />
+      )}
 
       {/* Centered Play/Pause visual animation overlay */}
-      {showIndicator && (
+      {!isEmbed && showIndicator && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="p-4 rounded-full bg-black/70 text-white backdrop-blur-md border border-white/10 animate-ping">
             {showIndicator === 'play' ? (
@@ -318,42 +373,48 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center gap-4">
             {/* Play/Pause toggle */}
-            <button 
-              onClick={togglePlay} 
-              className="w-8 h-8 rounded-lg bg-[#00b4d8] hover:bg-[#00b4d8]/80 text-[#090b10] flex items-center justify-center transition-all shadow-lg active:scale-95"
-              title={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
-            </button>
+            {!isEmbed && (
+              <button 
+                onClick={togglePlay} 
+                className="w-8 h-8 rounded-lg bg-[#00b4d8] hover:bg-[#00b4d8]/80 text-[#090b10] flex items-center justify-center transition-all shadow-lg active:scale-95"
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
+              </button>
+            )}
 
             {/* Mute and Volume controls */}
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={toggleMute} 
-                className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all"
-                title={isMuted ? "Unmute" : "Mute"}
-              >
-                {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-500" /> : <Volume2 className="w-3.5 h-3.5" />}
-              </button>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05" 
-                value={isMuted ? 0 : volume} 
-                onChange={handleVolume}
-                className="w-16 md:w-20 h-1 accent-[#00b4d8] rounded-lg cursor-pointer bg-slate-800"
-              />
-            </div>
+            {!isEmbed && (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={toggleMute} 
+                  className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+                  title={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-500" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.05" 
+                  value={isMuted ? 0 : volume} 
+                  onChange={handleVolume}
+                  className="w-16 md:w-20 h-1 accent-[#00b4d8] rounded-lg cursor-pointer bg-slate-800"
+                />
+              </div>
+            )}
 
             {/* Manual refresh button */}
-            <button
-              onClick={handleManualRefresh}
-              className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all"
-              title="Reload Stream Source"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
+            {!isEmbed && (
+              <button
+                onClick={handleManualRefresh}
+                className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+                title="Reload Stream Source"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -363,13 +424,15 @@ export default function CustomPlayer({ urls = [], channelName }: CustomPlayerPro
             </span>
 
             {/* Picture-in-Picture toggle button */}
-            <button 
-              onClick={togglePictureInPicture}
-              className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all active:scale-95"
-              title="Picture-in-Picture (P)"
-            >
-              <Tv className="w-3.5 h-3.5" />
-            </button>
+            {!isEmbed && (
+              <button 
+                onClick={togglePictureInPicture}
+                className="w-8 h-8 rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:text-white flex items-center justify-center transition-all active:scale-95"
+                title="Picture-in-Picture (P)"
+              >
+                <Tv className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             {/* Fullscreen toggle button */}
             <button 

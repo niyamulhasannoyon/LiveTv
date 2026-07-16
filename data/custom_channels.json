@@ -4,8 +4,8 @@
     "logo": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=150&auto=format&fit=crop",
     "category": "Sports",
     "urls": [
-      "https://test-streams.mux.dev/x36xhg/main.m3u8",
-      "https://rbmn-live.akamaized.net/hls/live/590945/BoRB-AT/master.m3u8"
+      "https://m3u8.ott.blue/watch/7839/index.m3u8",
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
     ],
     "country": "Bangladesh"
   },
@@ -14,6 +14,7 @@
     "logo": "https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=150&auto=format&fit=crop",
     "category": "Sports",
     "urls": [
+      "https://m3u8.ott.blue/watch/7842/index.m3u8",
       "https://test-streams.mux.dev/x36xhg/main.m3u8"
     ],
     "country": "Bangladesh"
@@ -41,6 +42,7 @@
     "logo": "https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=150&auto=format&fit=crop",
     "category": "Sports",
     "urls": [
+      "https://willow-ono.amagi.tv/playlist1080.m3u8",
       "https://test-streams.mux.dev/x36xhg/main.m3u8"
     ],
     "country": "United States"
@@ -59,6 +61,7 @@
     "logo": "https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=150&auto=format&fit=crop",
     "category": "Sports",
     "urls": [
+      "https://m3u8.ott.blue/watch/8512/index.m3u8",
       "https://test-streams.mux.dev/x36xhg/main.m3u8"
     ],
     "country": "Pakistan"
@@ -70,6 +73,105 @@
     "urls": [
       "https://test-streams.mux.dev/x36xhg/main.m3u8"
     ],
-    "country": "Global"
+    "country": "Global Sports"
+  },
+  {
+    "name": "Tring / Vizion Plus",
+    "logo": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://fe.tring.al/delta/105/out/u/rdghfhsfhfshs.m3u8"
+    ],
+    "country": "Albania"
+  },
+  {
+    "name": "DeporTV",
+    "logo": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://5fb24b460df87.streamlock.net/live-cont.ar/deportv/playlist.m3u8"
+    ],
+    "country": "Argentina"
+  },
+  {
+    "name": "Deportes13",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://redirector.rudo.video/hls-video/ey6283je82983je9823je8jowowiekldk9838274/13d/13d.smil/playlist.m3u8"
+    ],
+    "country": "Chile"
+  },
+  {
+    "name": "CCTV-5 HD",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://node1.olelive.com:6443/live/CCTV5HD/hls.m3u8"
+    ],
+    "country": "China"
+  },
+  {
+    "name": "CCTV-5+ HD",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://node1.olelive.com:6443/live/CCTV5PHD/hls.m3u8"
+    ],
+    "country": "China"
+  },
+  {
+    "name": "CBC Sport HD",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://mn-nl.mncdn.com/cbcsports_live/cbcsports/playlist.m3u8"
+    ],
+    "country": "Azerbaijan"
+  },
+  {
+    "name": "Sportska televizija",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://stream.agatin.hr:3087/live/sptvlive.m3u8"
+    ],
+    "country": "Croatia"
+  },
+  {
+    "name": "Sportitalia Plus",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://sportsitalia-samsungitaly.amagi.tv/playlist.m3u8"
+    ],
+    "country": "Italy"
+  },
+  {
+    "name": "SOLOCALCIO",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://di-g7ij0rwh.vo.lswcdn.net/sportitalia/sisolocalcio.smil/playlist.m3u8"
+    ],
+    "country": "Italy"
+  },
+  {
+    "name": "TRT Spor HD",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://tv-trtspor1.medya.trt.com.tr/master.m3u8"
+    ],
+    "country": "Turkey"
+  },
+  {
+    "name": "TRT Spor 2 HD",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://tv-trtspor2.medya.trt.com.tr/master.m3u8"
+    ],
+    "country": "Turkey"
   }
 ]

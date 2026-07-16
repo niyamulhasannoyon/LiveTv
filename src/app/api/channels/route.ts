@@ -110,19 +110,39 @@ export async function GET() {
     const combined = Object.values(channelsMap);
 
     return NextResponse.json(combined);
-  } catch (error: any) {
+  } catch (error: unknown) {
     try {
       const customChannels = readCustomChannels();
       if (customChannels.length > 0) {
         return NextResponse.json(customChannels);
       }
     } catch (_) {}
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
+const countryCodeToNameMap: Record<string, string> = {
+  'bd': 'Bangladesh',
+  'in': 'India',
+  'us': 'United States',
+  'gb': 'United Kingdom',
+  'uk': 'United Kingdom',
+  'pk': 'Pakistan',
+  'it': 'Italy',
+  'ar': 'Argentina',
+  'al': 'Albania',
+  'au': 'Australia',
+  'jp': 'Japan',
+  'ca': 'Canada',
+  'fr': 'France',
+  'de': 'Germany',
+  'es': 'Spain',
+  'br': 'Brazil',
+};
+
 // Simple M3U Parser helper function grouping by channel name
-function parseM3U(data: string, country: string): IPTVChannel[] {
+function parseM3U(data: string, defaultCountry: string): IPTVChannel[] {
   const lines = data.split('\n');
   const channelsList: IPTVChannel[] = [];
   let currentMeta: Partial<Omit<IPTVChannel, 'urls'>> = {};
@@ -130,17 +150,29 @@ function parseM3U(data: string, country: string): IPTVChannel[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (line.startsWith('#EXTINF:')) {
-      const nameMatch = line.match(/,(.+)$/);
+      const nameAttrMatch = line.match(/tvg-name="([^"]+)"/);
       const logoMatch = line.match(/tvg-logo="([^"]+)"/);
       const groupMatch = line.match(/group-title="([^"]+)"/);
+      const countryMatch = line.match(/tvg-country="([^"]+)"/);
 
+      // Extract display name (after the last comma)
+      const commaIndex = line.lastIndexOf(',');
+      const displayName = commaIndex !== -1 ? line.substring(commaIndex + 1).trim() : 'Unknown Channel';
+
+      const finalName = nameAttrMatch ? nameAttrMatch[1].trim() : displayName;
       const rawCategory = groupMatch ? groupMatch[1] : 'General';
+      
+      let finalCountry = defaultCountry;
+      if (countryMatch) {
+        const code = countryMatch[1].trim().toLowerCase();
+        finalCountry = countryCodeToNameMap[code] || countryMatch[1].trim();
+      }
 
       currentMeta = {
-        name: nameMatch ? nameMatch[1].trim() : 'Unknown Channel',
+        name: finalName,
         logo: logoMatch ? logoMatch[1] : 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop',
         category: normalizeCategory(rawCategory),
-        country: country
+        country: finalCountry
       };
     } else if (line.startsWith('http')) {
       const name = currentMeta.name || 'Unknown Channel';
@@ -152,7 +184,7 @@ function parseM3U(data: string, country: string): IPTVChannel[] {
         logo: currentMeta.logo || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=150&auto=format&fit=crop',
         category: currentMeta.category || 'General',
         urls: [streamUrl],
-        country: currentMeta.country || country
+        country: currentMeta.country || defaultCountry
       });
       currentMeta = {};
     }
