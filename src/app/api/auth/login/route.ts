@@ -10,8 +10,14 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
     
-    if (!fs.existsSync(usersPath)) return NextResponse.json({ error: 'Invalid authentication credentials.' }, { status: 400 });
-    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+    let users = [];
+    if (fs.existsSync(usersPath)) {
+      try {
+        users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+      } catch (err) {
+        users = [];
+      }
+    }
 
     const user = users.find((u: any) => u.email === email);
     if (!user || !(await bcrypt.compare(password, user.password))) {

@@ -1,1 +1,75 @@
-[]
+[
+  {
+    "name": "T Sports HD",
+    "logo": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8",
+      "https://rbmn-live.akamaized.net/hls/live/590945/BoRB-AT/master.m3u8"
+    ],
+    "country": "Bangladesh"
+  },
+  {
+    "name": "GTV HD (Gazi TV)",
+    "logo": "https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
+    ],
+    "country": "Bangladesh"
+  },
+  {
+    "name": "Star Sports 1 HD",
+    "logo": "https://images.unsplash.com/photo-1540747737956-37872404a8de?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
+    ],
+    "country": "India"
+  },
+  {
+    "name": "Sony Sports Ten 1 HD",
+    "logo": "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
+    ],
+    "country": "India"
+  },
+  {
+    "name": "Willow TV HD (Cricket)",
+    "logo": "https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
+    ],
+    "country": "United States"
+  },
+  {
+    "name": "Sky Sports Cricket HD",
+    "logo": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
+    ],
+    "country": "United Kingdom"
+  },
+  {
+    "name": "PTV Sports Live",
+    "logo": "https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
+    ],
+    "country": "Pakistan"
+  },
+  {
+    "name": "FIFA TV Live",
+    "logo": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=150&auto=format&fit=crop",
+    "category": "Sports",
+    "urls": [
+      "https://test-streams.mux.dev/x36xhg/main.m3u8"
+    ],
+    "country": "Global"
+  }
+]

@@ -27,6 +27,7 @@ export interface Channel {
   category: string; // e.g. "FIFA", "WORLD CUP", "Sports", "Entertainment", "News"
   isLive?: boolean;
   metadata?: string; // e.g. "world-cup-bdix • Global"
+  country?: string;  // e.g. "Bangladesh", "India", etc.
   sources: StreamSource[];
 }
 

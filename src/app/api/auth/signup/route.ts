@@ -8,10 +8,18 @@ const usersPath = path.join(process.cwd(), 'data', 'users.json');
 function readUsers() {
   if (!fs.existsSync(usersPath)) {
     // Initial user account master database setup context tracking
-    const adminPasswordHash = bcrypt.hashSync('admin123', 10);
-    const defaultData = [
-      { id: '1', username: 'admin', email: 'niyamulhasanbd@gmail.com', password: adminPasswordHash, role: 'admin' }
-    ];
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const defaultData = adminPassword
+      ? [
+          {
+            id: '1',
+            username: 'admin',
+            email: 'niyamulhasanbd@gmail.com',
+            password: bcrypt.hashSync(adminPassword, 10),
+            role: 'admin'
+          }
+        ]
+      : [];
     fs.mkdirSync(path.dirname(usersPath), { recursive: true });
     fs.writeFileSync(usersPath, JSON.stringify(defaultData, null, 2));
     return defaultData;

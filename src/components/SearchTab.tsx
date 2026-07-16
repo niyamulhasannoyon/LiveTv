@@ -13,6 +13,18 @@ interface SearchTabProps {
   onToggleFavorite: (id: string) => void;
 }
 
+const getCountryIcon = (countryName: string) => {
+  switch (countryName) {
+    case 'Bangladesh': return '🇧🇩';
+    case 'India': return '🇮🇳';
+    case 'United Kingdom': return '🇬🇧';
+    case 'United States': return '🇺🇸';
+    case 'Pakistan': return '🇵🇰';
+    case 'Global Sports': return '⚽';
+    default: return '🌐';
+  }
+};
+
 export default function SearchTab({ 
   channels, 
   onSelectChannel, 
@@ -114,8 +126,13 @@ export default function SearchTab({
                       <span className="text-sm font-bold text-white tracking-wide">
                         {channel.name}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-semibold mt-0.5 uppercase tracking-wider">
-                        {channel.metadata || `${channel.category} • Global`}
+                      <span className="text-[10px] text-slate-400 font-semibold mt-0.5 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>{channel.category}</span>
+                        <span>•</span>
+                        <span className="text-slate-300 font-bold flex items-center gap-0.5">
+                          <span>{getCountryIcon(channel.country || 'Global Sports')}</span>
+                          <span>{channel.country || 'Global Sports'}</span>
+                        </span>
                       </span>
                     </div>
                   </div>

@@ -18,7 +18,33 @@ interface IPTVChannel {
   logo: string;
   category: string;
   urls: string[];
+  country?: string;
 }
+
+const getCountryIcon = (countryName: string) => {
+  switch (countryName) {
+    case 'Bangladesh': return '🇧🇩';
+    case 'India': return '🇮🇳';
+    case 'United Kingdom': return '🇬🇧';
+    case 'United States': return '🇺🇸';
+    case 'Pakistan': return '🇵🇰';
+    case 'Global Sports': return '⚽';
+    default: return '🌐';
+  }
+};
+
+const getCategoryDisplayName = (catName: string) => {
+  switch (catName) {
+    case 'All': return '📺 All';
+    case 'Favorites': return '⭐ Bookmarks';
+    case 'Sports': return '⚽ Sports';
+    case 'News': return '📰 News';
+    case 'Movies': return '🍿 Movies';
+    case 'Kids': return '👶 Kids';
+    case 'Entertainment': return '🎭 Entertainment';
+    default: return catName;
+  }
+};
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'channels' | 'upcoming' | 'search'>('home');
@@ -27,6 +53,7 @@ export default function Home() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCountry, setSelectedCountry] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +133,7 @@ export default function Home() {
       category: c.category || 'General',
       isLive: true,
       metadata: `${c.category} • HD`,
+      country: c.country || 'Global Sports',
       sources: c.urls.map((url, uIndex) => ({
         id: `src-ch-${index}-${uIndex}`,
         name: `Mirror ${uIndex + 1}`,
@@ -170,12 +198,36 @@ export default function Home() {
     return ['All', 'Favorites', ...Array.from(new Set(list))];
   }, [channels]);
 
+  // Countries parsing memo calculation
+  const countries = useMemo(() => {
+    const list = channels.map(c => c.country || 'Global Sports');
+    const unique = Array.from(new Set(list));
+    const order = ['Bangladesh', 'India', 'United Kingdom', 'United States', 'Pakistan', 'Global Sports'];
+    return [
+      'All',
+      ...unique.sort((a, b) => {
+        const indexA = order.indexOf(a);
+        const indexB = order.indexOf(b);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+      })
+    ];
+  }, [channels]);
+
   // Client filtering & dynamic sorting (Favorites float to top)
   const processedChannels = useMemo(() => {
     let result = channels.filter(c => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // Country filter
+    if (selectedCountry !== 'All') {
+      result = result.filter(c => (c.country || 'Global Sports') === selectedCountry);
+    }
+
+    // Category filter
     if (selectedCategory === 'Favorites') {
       result = result.filter(c => favorites.includes(c.name));
     } else if (selectedCategory !== 'All') {
@@ -191,7 +243,7 @@ export default function Home() {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [channels, searchQuery, selectedCategory, favorites]);
+  }, [channels, searchQuery, selectedCategory, selectedCountry, favorites]);
 
   // Loading Screen Skeleton Loader
   if (loading) {
@@ -351,21 +403,45 @@ export default function Home() {
                   />
                 </div>
 
-                {/* Scrollable Categories List */}
-                <div className="flex gap-2 overflow-x-auto pb-1 text-xs no-scrollbar snap-x">
-                  {categories.map((cat, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-3.5 py-1.5 rounded-full font-bold whitespace-nowrap transition-all border snap-start ${
-                        selectedCategory === cat 
-                          ? 'bg-[#00b4d8]/10 text-[#00b4d8] border-[#00b4d8] shadow-md shadow-[#00b4d8]/10' 
-                          : 'bg-[#090b10] text-slate-400 border-white/5 hover:bg-white/5'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                {/* Country Filter Selection */}
+                <div className="space-y-1">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block ml-1">Country</span>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar snap-x">
+                    {countries.map((country, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedCountry(country)}
+                        className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border snap-start flex items-center gap-1 ${
+                          selectedCountry === country
+                            ? 'bg-[#00b4d8]/15 text-[#00b4d8] border-[#00b4d8] shadow-inner shadow-[#00b4d8]/10'
+                            : 'bg-[#090b10] text-slate-400 border-white/5 hover:bg-[#090b10]/80'
+                        }`}
+                      >
+                        <span>{country === 'All' ? '🌐' : getCountryIcon(country)}</span>
+                        <span>{country === 'All' ? 'All Countries' : country}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Category Filter Selection */}
+                <div className="space-y-1 border-t border-white/5 pt-2">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block ml-1">Category</span>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar snap-x">
+                    {categories.map((cat, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border snap-start ${
+                          selectedCategory === cat 
+                            ? 'bg-[#00b4d8]/15 text-[#00b4d8] border-[#00b4d8] shadow-inner shadow-[#00b4d8]/10' 
+                            : 'bg-[#090b10] text-slate-400 border-white/5 hover:bg-[#090b10]/80'
+                        }`}
+                      >
+                        {getCategoryDisplayName(cat)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -375,7 +451,7 @@ export default function Home() {
                   <div className="text-center py-10 px-4 border border-dashed border-white/10 rounded-2xl bg-[#090b10]/20 flex flex-col items-center">
                     <Star className="w-8 h-8 text-yellow-500/40 mb-2 fill-none animate-pulse" />
                     <p className="text-xs text-slate-300 font-bold mb-1">
-                      No Favorites Added Yet
+                      No Bookmarked Channels
                     </p>
                     <p className="text-[10px] text-slate-500 leading-normal max-w-[180px] mb-4 text-center">
                       Click the star icon on any channel to bookmark your favorites here.
@@ -415,9 +491,16 @@ export default function Home() {
                             <p className="text-xs md:text-sm font-bold truncate tracking-wide text-slate-200">
                               {channel.name}
                             </p>
-                            <span className={`text-[10px] font-semibold ${isPlaying ? 'text-[#00b4d8] opacity-90' : 'text-slate-500'} uppercase tracking-wider`}>
-                              {channel.category}
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className={`text-[9px] font-semibold ${isPlaying ? 'text-[#00b4d8] opacity-90' : 'text-slate-500'} uppercase tracking-wider`}>
+                                {channel.category}
+                              </span>
+                              <span className="text-[9px] text-slate-700 font-black">•</span>
+                              <span className="text-[9px] font-bold text-slate-400 flex items-center gap-0.5">
+                                <span>{getCountryIcon(channel.country || 'Global Sports')}</span>
+                                <span>{channel.country || 'Global Sports'}</span>
+                              </span>
+                            </div>
                           </div>
                         </div>
                         
