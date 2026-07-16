@@ -22,6 +22,14 @@ const getCountryIcon = (countryName: string) => {
     case 'United States': return '🇺🇸';
     case 'Pakistan': return '🇵🇰';
     case 'Global Sports': return '⚽';
+    case 'Albania': return '🇦🇱';
+    case 'Argentina': return '🇦🇷';
+    case 'Chile': return '🇨🇱';
+    case 'China': return '🇨🇳';
+    case 'Azerbaijan': return '🇦🇿';
+    case 'Croatia': return '🇭🇷';
+    case 'Italy': return '🇮🇹';
+    case 'Turkey': return '🇹🇷';
     default: return '🌐';
   }
 };
