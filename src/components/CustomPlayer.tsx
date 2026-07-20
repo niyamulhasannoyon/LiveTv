@@ -11,6 +11,7 @@ interface CustomPlayerProps {
   isGeoBlocked?: boolean;
   country?: string;
   channelId?: string;
+  httpReferrer?: string | null;
 }
 
 function getEmbedUrl(url: string): string | null {
@@ -43,7 +44,7 @@ function getEmbedUrl(url: string): string | null {
   return null;
 }
 
-export default function CustomPlayer({ urls = [], channelName, isGeoBlocked, country, channelId }: CustomPlayerProps) {
+export default function CustomPlayer({ urls = [], channelName, isGeoBlocked, country, channelId, httpReferrer }: CustomPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -94,7 +95,11 @@ export default function CustomPlayer({ urls = [], channelName, isGeoBlocked, cou
 
     let currentStream = urls[urlIndex];
     if (currentStream && (currentStream.startsWith('http://') || currentStream.startsWith('https://')) && !isEmbed) {
-      currentStream = `/api/stream?url=${encodeURIComponent(currentStream)}`;
+      const proxyBase = '/api/stream?url=';
+      const encodedUrl = encodeURIComponent(currentStream);
+      currentStream = httpReferrer 
+        ? `${proxyBase}${encodedUrl}&referer=${encodeURIComponent(httpReferrer)}`
+        : `${proxyBase}${encodedUrl}`;
     }
     let hls: Hls | null = null;
 

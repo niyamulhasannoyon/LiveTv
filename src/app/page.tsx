@@ -23,6 +23,7 @@ interface IPTVChannel {
   isGeoBlocked?: boolean;
   status?: string;
   failure_count?: number;
+  httpReferrer?: string | null;
 }
 
 const getCountryIcon = (countryName: string) => {
@@ -149,7 +150,8 @@ export default function Home() {
               country: val.country || 'Bangladesh',
               status: val.status || 'Smooth',
               failure_count: val.failureCount ?? val.failure_count ?? 0,
-              isGeoBlocked: !!val.isGeoBlocked
+              isGeoBlocked: !!val.isGeoBlocked,
+              httpReferrer: val.httpReferrer || val.referer || null
             });
           });
 
@@ -443,6 +445,7 @@ export default function Home() {
                 isGeoBlocked={selectedChannel?.isGeoBlocked}
                 country={selectedChannel?.country}
                 channelId={selectedChannel?.id}
+                httpReferrer={selectedChannel?.httpReferrer}
               />
               {selectedChannel && (
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase tracking-wider bg-white/5 border border-white/5 rounded-2xl px-4 py-2.5">

@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const targetUrl = searchParams.get('url');
+  const referer = searchParams.get('referer');
 
   if (!targetUrl) {
     return new Response('Missing URL parameter', { status: 400 });
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        ...(referer ? { 'Referer': referer } : {})
       },
       cache: 'no-store'
     });

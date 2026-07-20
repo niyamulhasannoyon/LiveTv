@@ -17,6 +17,7 @@ interface IPTVChannel {
   status?: string;
   failure_count?: number;
   isGeoBlocked?: boolean;
+  httpReferrer?: string | null;
 }
 
 async function readCustomChannels(): Promise<IPTVChannel[]> {
@@ -38,7 +39,8 @@ async function readCustomChannels(): Promise<IPTVChannel[]> {
         country: data.country || 'Bangladesh',
         status: data.status || 'Smooth',
         failure_count: data.failureCount ?? data.failure_count ?? 0,
-        isGeoBlocked: !!data.isGeoBlocked
+        isGeoBlocked: !!data.isGeoBlocked,
+        httpReferrer: data.httpReferrer || data.referer || null
       });
     });
     return customChannels;
